@@ -40,12 +40,53 @@ export interface ArticleItem {
     readonly publishedAt: string | null;
 }
 
+export interface ExperienceItem {
+    readonly id: number;
+    readonly roleTitle: string;
+    readonly organization: string;
+    readonly period: string;
+    readonly highlights: readonly string[];
+    readonly sortOrder: number;
+}
+
+export interface SkillGroupItem {
+    readonly id: number;
+    readonly category: string;
+    readonly skills: readonly string[];
+    readonly sortOrder: number;
+}
+
+export type InquiryStatus = 'new' | 'in_review' | 'replied' | 'archived';
+
+export interface InquiryItem {
+    readonly id: number;
+    readonly name: string;
+    readonly email: string;
+    readonly company: string | null;
+    readonly scopeTags: readonly string[];
+    readonly message: string;
+    readonly status: InquiryStatus;
+    readonly adminNotes: string | null;
+    readonly createdAt: string | null;
+}
+
 export interface SiteSettings {
     readonly heroHeadline: string;
     readonly heroSubheadline: string;
     readonly availabilityStatus: string;
     readonly activeCvPath: string | null;
     readonly telemetry: readonly TelemetryMetric[];
+}
+
+export interface AdminDashboardStats {
+    readonly projectsTotal: number;
+    readonly projectsPublished: number;
+    readonly projectsFlagship: number;
+    readonly articlesTotal: number;
+    readonly articlesPublished: number;
+    readonly inquiriesNew: number;
+    readonly inquiriesTotal: number;
+    readonly pageViewsTotal: number;
 }
 
 export interface AuthUser {

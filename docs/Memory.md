@@ -29,7 +29,10 @@
   - Built readonly PHP DTOs (`app/Data/`), safe CommonMark `MarkdownRenderer`, Redis-backed `PortfolioQueryService`, and `ClearPortfolioCacheAction` for instant cache invalidation.
   - Authored idempotent `PortfolioContentSeeder` pre-populating Manoj Shrestha's verified owner account, 4 flagship case studies (with Mermaid diagrams), 4 secondary systems, 8 technical articles, STAR experience timeline, 4 skill groups, and site settings.
   - Wired `HomeController` to cached DTOs and verified with `migrate:fresh --seed`, `php artisan test` (6 passed, 42 assertions), `npm run types`, and `npm run build`.
-- [ ] Phase 3: Private Single-Owner `/admin` CMS
+- [x] Phase 3: Private Single-Owner `/admin` CMS
+  - *Completed (2026-11-21)*: Built single-owner auth (`/admin/login`, `EnsurePortfolioOwner` middleware, Redis `admin-login` rate limiter, public `/register` disabled) and fast zero-WebGL/zero-Lenis `AdminLayout.tsx`.
+  - Implemented full CRUD for Projects (with metrics, Mermaid diagrams, randomized preview image upload + async `OptimizeUploadedMediaJob` on Horizon `media` queue), Articles (Markdown editor + live split preview + reading-time estimator), Resume/Experiences/SkillGroups/CV PDF, and Inquiries Scope Inbox.
+  - Verified instant Redis cache invalidation across all writes with `php artisan test` (13 passed), `npm run types`, and `npm run build`.
 - [ ] Phase 4: Public Scroll Choreography, Contrast Shifts & Showcases
 - [ ] Phase 5: Case Study Details, Technical Blog, Resume & SEO
 - [ ] Phase 6: Slide-Over Scope Drawer, Horizon Queues & Production Hardening
