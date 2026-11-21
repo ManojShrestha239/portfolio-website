@@ -6,6 +6,7 @@ import { PublicLayout } from '@/layouts/PublicLayout';
 import { SeoHead } from '@/components/domain/SeoHead';
 import { Button } from '@/components/ui/button';
 import { FieldConsole } from '@/components/domain/FieldConsole';
+import { DateCalendarSwitcher } from '@/components/domain/DateCalendarSwitcher';
 import { FlagshipShowcaseSection } from '@/components/domain/FlagshipShowcaseSection';
 import { KineticMarqueeText } from '@/motion/KineticMarqueeText';
 import { ContrastShiftBand } from '@/motion/ContrastShiftBand';
@@ -78,7 +79,7 @@ function Home({
                     <div className="lg:col-span-7 xl:col-span-8">
                         <div
                             data-hero="0"
-                            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                            className="flex flex-wrap items-center gap-x-4 gap-y-2.5"
                         >
                             <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-accent">
                                 Portfolio · Edition 01
@@ -87,6 +88,7 @@ function Home({
                             <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-muted">
                                 {app.location}
                             </span>
+                            <DateCalendarSwitcher variant="compact" />
                         </div>
 
                         <h1 className="display-monumental mt-7 text-[clamp(3.4rem,11.5vw,10.8rem)] text-ink">

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { AdminLayout } from '@/layouts/AdminLayout';
+import { DateCalendarSwitcher } from '@/components/domain/DateCalendarSwitcher';
 import { Button } from '@/components/ui/button';
 import type { AdminDashboardStats, InquiryItem, SharedPageProps } from '@/types/portfolio';
 
@@ -46,7 +47,8 @@ function AdminDashboard({ stats, recentInquiries }: DashboardProps) {
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <DateCalendarSwitcher variant="compact" />
                     <Button variant="outline" size="sm" asChild>
                         <Link href="/admin/articles/create">
                             <Plus className="h-3.5 w-3.5" aria-hidden="true" />

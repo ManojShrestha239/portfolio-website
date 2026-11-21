@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { MagneticButton } from '@/motion/MagneticButton';
 import { useSmoothScroll } from '@/motion/SmoothScrollProvider';
+import { DateCalendarSwitcher } from '@/components/domain/DateCalendarSwitcher';
 import { Button } from '@/components/ui/button';
 
 const COLOPHON_STACK: readonly string[] = [
@@ -153,6 +154,8 @@ export function EditorialFooter() {
                                 {clock}
                             </div>
                         </div>
+
+                        <DateCalendarSwitcher variant="panel" />
 
                         <div className="border-t border-hairline pt-3">
                             <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted">
