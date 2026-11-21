@@ -33,7 +33,10 @@
   - *Completed (2026-11-21)*: Built single-owner auth (`/admin/login`, `EnsurePortfolioOwner` middleware, Redis `admin-login` rate limiter, public `/register` disabled) and fast zero-WebGL/zero-Lenis `AdminLayout.tsx`.
   - Implemented full CRUD for Projects (with metrics, Mermaid diagrams, randomized preview image upload + async `OptimizeUploadedMediaJob` on Horizon `media` queue), Articles (Markdown editor + live split preview + reading-time estimator), Resume/Experiences/SkillGroups/CV PDF, and Inquiries Scope Inbox.
   - Verified instant Redis cache invalidation across all writes with `php artisan test` (13 passed), `npm run types`, and `npm run build`.
-- [ ] Phase 4: Public Scroll Choreography, Contrast Shifts & Showcases
+- [x] Phase 4: Public Scroll Choreography, Contrast Shifts & Showcases
+  - *Completed (2026-11-21)*: Built `PageTransition.tsx` (Framer Motion `<AnimatePresence mode="wait">` keyed to Inertia URL), `MagneticButton.tsx` (<=8px damped spring on pointer-fine devices), `KineticMarqueeText.tsx` (GSAP ScrollTrigger scrubbed horizontal display text), `ContrastShiftBand.tsx` (full-bleed `#0C0D0F` <-> `#F4F3EF` archival shift with clean unmount/navigation reset), and `HoverRevealRow.tsx` (hover tech-stack marquee + cursor-following masked preview).
+  - Built `MetricStrip.tsx` and GSAP ScrollTrigger-scrubbed `FlagshipShowcaseSection.tsx`, refactored `PublicLayout.tsx`, and composed the full 100% dynamic `Public/Home.tsx` wired to Redis/MySQL DTOs.
+  - Verified with `npm run types`, `npm run build`, and `php artisan test` (13 passed, 82 assertions).
 - [ ] Phase 5: Case Study Details, Technical Blog, Resume & SEO
 - [ ] Phase 6: Slide-Over Scope Drawer, Horizon Queues & Production Hardening
 

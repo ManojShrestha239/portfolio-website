@@ -37,6 +37,7 @@
     color-scheme: dark;
 }
 
+:root[data-band="archival"],
 [data-band="archival"] {
     --theme-canvas: #F4F3EF;
     --theme-surface: #EAE8E1;
@@ -58,6 +59,8 @@
         text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        transition: background-color 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                    color 480ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     body {
@@ -66,8 +69,8 @@
         overflow-x: clip;
         background-color: var(--theme-canvas);
         color: var(--theme-ink);
-        transition: background-color 420ms cubic-bezier(0.22, 1, 0.36, 1),
-                    color 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        transition: background-color 480ms cubic-bezier(0.22, 1, 0.36, 1),
+                    color 480ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     ::selection {
@@ -94,6 +97,21 @@
     text-transform: uppercase;
 }
 
+@keyframes hover-marquee {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        transform: translate3d(-50%, 0, 0);
+    }
+}
+
+.animate-hover-marquee {
+    display: inline-flex;
+    width: max-content;
+    animation: hover-marquee 16s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -102,5 +120,9 @@
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+
+    .animate-hover-marquee {
+        animation: none !important;
     }
 }
