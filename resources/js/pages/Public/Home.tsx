@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
-import { Head, Link } from '@inertiajs/react';
-import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { Link } from '@inertiajs/react';
+import gsap from 'gsap';
+import { ArrowUpRight } from 'lucide-react';
 import { PublicLayout } from '@/layouts/PublicLayout';
+import { SeoHead } from '@/components/domain/SeoHead';
 import { Button } from '@/components/ui/button';
-import { MetricStrip } from '@/components/domain/MetricStrip';
+import { FieldConsole } from '@/components/domain/FieldConsole';
 import { FlagshipShowcaseSection } from '@/components/domain/FlagshipShowcaseSection';
 import { KineticMarqueeText } from '@/motion/KineticMarqueeText';
 import { ContrastShiftBand } from '@/motion/ContrastShiftBand';
@@ -18,45 +20,156 @@ function Home({
     flagshipProjects,
     secondaryProjects,
     recentArticles,
+    app,
 }: HomePageProps) {
     const { openDrawer } = useScopeDrawer();
+    const heroRef = useRef<HTMLElement | null>(null);
+
+    useEffect(() => {
+        const hero = heroRef.current;
+        if (!hero) {
+            return;
+        }
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduced) {
+            return;
+        }
+
+        const ctx = gsap.context(() => {
+            const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+            tl.from('[data-hero="0"]', { opacity: 0, y: 18, duration: 0.7 }, 0.08)
+                .from(
+                    '[data-hero-line]',
+                    {
+                        yPercent: 110,
+                        duration: 0.9,
+                        stagger: 0.12,
+                        ease: 'power4.out',
+                    },
+                    0.12,
+                )
+                .from('[data-hero="1"]', { opacity: 0, y: 18, duration: 0.7 }, 0.48)
+                .from('[data-hero="2"]', { opacity: 0, y: 18, duration: 0.7 }, 0.6)
+                .from('[data-hero="3"]', { opacity: 0, x: 24, duration: 0.8 }, 0.52)
+                .from(
+                    '[data-hero="4"] > div',
+                    { opacity: 0, y: 20, duration: 0.6, stagger: 0.08 },
+                    0.78,
+                );
+        }, hero);
+
+        return () => ctx.revert();
+    }, []);
+
     return (
         <>
-            <Head title="Enterprise SaaS & Industrial Automation Architect" />
+            <SeoHead
+                title="Senior Full-Stack Engineer · Enterprise SaaS & Industrial Automation"
+                description={siteSettings.heroSubheadline}
+            />
 
-            {/* 1. Editorial Hero & Live Telemetry Index */}
-            <section className="mx-auto max-w-[1380px] px-6 pb-20 pt-20 lg:px-10 lg:pt-28">
-                <div className="grid grid-cols-1 gap-10 border-b border-hairline pb-16 lg:grid-cols-12">
-                    <div className="lg:col-span-9">
-                        <p className="telemetry-label mb-6 flex items-center gap-3 text-ink-secondary">
-                            <span className="inline-block h-px w-8 bg-accent" aria-hidden="true" />
-                            <span>{siteSettings.availabilityStatus}</span>
-                        </p>
+            {/* 1. Monumental Hero + Live WebGL Field Console + 4-Column Hairline Ledger */}
+            <section
+                id="overview"
+                ref={heroRef}
+                className="flex min-h-[calc(100svh-4.25rem)] flex-col justify-between px-5 pb-8 pt-10 lg:px-8 lg:pt-14"
+            >
+                <div className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-12">
+                    <div className="lg:col-span-7 xl:col-span-8">
+                        <div
+                            data-hero="0"
+                            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                        >
+                            <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-accent">
+                                Portfolio · Edition 01
+                            </span>
+                            <span className="h-px w-10 bg-hairline" aria-hidden="true" />
+                            <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-muted">
+                                {app.location}
+                            </span>
+                        </div>
 
-                        <h1 className="editorial-display text-[clamp(3.2rem,8vw,7.5rem)] font-normal text-ink">
-                            {siteSettings.heroHeadline}
+                        <h1 className="display-monumental mt-7 text-[clamp(3.4rem,11.5vw,10.8rem)] text-ink">
+                            <span className="block overflow-hidden">
+                                <span data-hero-line className="block">
+                                    Manoj
+                                </span>
+                            </span>
+                            <span className="block overflow-hidden">
+                                <span data-hero-line className="outline-txt block">
+                                    Shrestha
+                                </span>
+                            </span>
                         </h1>
-                    </div>
 
-                    <div className="flex flex-col justify-end gap-6 lg:col-span-3">
-                        <p className="max-w-[34ch] text-sm leading-relaxed text-ink-secondary">
-                            {siteSettings.heroSubheadline}
-                        </p>
+                        <div
+                            data-hero="1"
+                            className="mt-8 max-w-[62ch] border-l border-accent pl-5"
+                        >
+                            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink">
+                                Senior Full-Stack Software Engineer
+                            </div>
+                            <div className="mt-2 font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
+                                Enterprise SaaS &amp; Industrial Automation Architect
+                            </div>
+                            <p className="mt-5 text-[15px] leading-[1.7] text-ink-secondary">
+                                {siteSettings.heroSubheadline}
+                            </p>
+                        </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div
+                            data-hero="2"
+                            className="mt-9 flex flex-wrap items-center gap-3"
+                        >
                             <MagneticButton>
-                                <Button variant="accent" size="default" asChild>
+                                <Button variant="accent" size="lg" asChild>
                                     <a href="#flagship">
-                                        <span>Inspect Systems</span>
-                                        <ArrowDownRight className="h-4 w-4" aria-hidden="true" />
+                                        <span>Inspect capability</span>
+                                        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                                     </a>
+                                </Button>
+                            </MagneticButton>
+
+                            <MagneticButton>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="lg"
+                                    onClick={() => openDrawer()}
+                                >
+                                    <span>Scope project</span>
                                 </Button>
                             </MagneticButton>
                         </div>
                     </div>
+
+                    <div data-hero="3" className="lg:col-span-5 xl:col-span-4">
+                        <FieldConsole />
+                    </div>
                 </div>
 
-                <MetricStrip metrics={telemetry} />
+                <div
+                    id="telemetry"
+                    data-hero="4"
+                    className="mx-auto mt-12 grid w-full max-w-[1680px] grid-cols-2 gap-px border-t border-hairline bg-hairline lg:grid-cols-4"
+                >
+                    {telemetry.map((metric) => (
+                        <div
+                            key={metric.label}
+                            className="bg-canvas px-4 py-5 transition-colors duration-500 lg:px-6"
+                        >
+                            <div className="display-monumental text-[clamp(1.9rem,3.4vw,2.9rem)] text-ink">
+                                {metric.value}
+                            </div>
+                            <div className="mt-3 font-mono text-[11px] uppercase tracking-[0.22em] text-ink-secondary">
+                                {metric.label}
+                            </div>
+                            <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-muted">
+                                {metric.unit}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </section>
 
             {/* 2. Horizontal Scroll Kinetic Typography Band 1 */}

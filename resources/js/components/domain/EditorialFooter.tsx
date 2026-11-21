@@ -1,0 +1,132 @@
+import { useEffect, useState } from 'react';
+import { Link } from '@inertiajs/react';
+import { ArrowUp } from 'lucide-react';
+import { MagneticButton } from '@/motion/MagneticButton';
+import { Button } from '@/components/ui/button';
+
+const COLOPHON_STACK: readonly string[] = [
+    'Laravel 13',
+    'PHP 8.4',
+    'Inertia.js',
+    'React 19',
+    'TypeScript',
+    'Tailwind CSS v4',
+    'MySQL 8.0',
+    'Redis + Horizon',
+    'Three.js / GLSL',
+    'Docker',
+];
+
+function formatNepalTime(): string {
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kathmandu',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+    }).format(new Date());
+}
+
+export function EditorialFooter() {
+    const [clock, setClock] = useState<string>('—:—:—');
+
+    useEffect(() => {
+        setClock(formatNepalTime());
+        const intervalId = window.setInterval(() => {
+            setClock(formatNepalTime());
+        }, 1000);
+        return () => window.clearInterval(intervalId);
+    }, []);
+
+    const scrollToTop = (): void => {
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    };
+
+    return (
+        <footer
+            id="colophon"
+            className="relative z-20 border-t border-hairline bg-canvas px-6 py-16 transition-colors duration-500 lg:px-10"
+        >
+            <div className="mx-auto grid max-w-[1680px] grid-cols-1 gap-10 lg:grid-cols-12">
+                <div className="lg:col-span-5">
+                    <div className="display-monumental text-[clamp(1.9rem,4vw,3.1rem)] text-ink">
+                        Manoj
+                        <br />
+                        Shrestha
+                    </div>
+                    <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.24em] text-ink-muted">
+                        Senior Full-Stack Software Engineer
+                    </p>
+                    <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">
+                        Enterprise SaaS &amp; Industrial Automation Architect
+                    </p>
+                </div>
+
+                <div className="lg:col-span-4">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-muted">
+                        Colophon
+                    </span>
+                    <ul className="mt-4 flex flex-wrap gap-2">
+                        {COLOPHON_STACK.map((item) => (
+                            <li
+                                key={item}
+                                className="border border-hairline px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-secondary"
+                            >
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="mt-5 font-mono text-[10px] uppercase leading-relaxed tracking-[0.12em] text-ink-muted">
+                        WebGL · Raymarched SDF · Bayer 8×8
+                        <br />
+                        Dynamic Laravel 13 + Redis/Horizon CMS
+                    </p>
+                </div>
+
+                <div className="flex flex-col items-start justify-between gap-6 lg:col-span-3 lg:items-end lg:text-right">
+                    <div>
+                        <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-muted">
+                            Nepal · local time
+                        </span>
+                        <div className="mt-2 font-mono text-2xl tabular-nums text-ink">
+                            {clock}
+                        </div>
+                    </div>
+
+                    <MagneticButton>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={scrollToTop}
+                        >
+                            <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span>Back to top</span>
+                        </Button>
+                    </MagneticButton>
+                </div>
+            </div>
+
+            <div className="mx-auto mt-12 flex max-w-[1680px] flex-wrap items-center justify-between gap-4 border-t border-hairline pt-6 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+                <span>
+                    &copy; {new Date().getFullYear()} Manoj Shrestha — engineering record
+                </span>
+                <div className="flex flex-wrap items-center gap-6">
+                    <Link href="/writing" className="transition-colors hover:text-ink">
+                        Writing
+                    </Link>
+                    <Link href="/resume" className="transition-colors hover:text-ink">
+                        Resume
+                    </Link>
+                    <Link href="/contact" className="transition-colors hover:text-ink">
+                        Contact
+                    </Link>
+                    <span className="hidden sm:inline">
+                        Set in Archivo Black, Plus Jakarta Sans &amp; JetBrains Mono
+                    </span>
+                </div>
+            </div>
+        </footer>
+    );
+}

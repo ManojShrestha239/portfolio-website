@@ -2,145 +2,179 @@ precision highp float;
 
 varying vec2 vUv;
 
-uniform float uTime;
 uniform vec2 uResolution;
+uniform float uTime;
 uniform vec2 uPointer;
-uniform float uScroll;
-uniform float uReducedMotion;
+uniform float uIntensity;
+uniform float uGrain;
+uniform float uAmber;
+uniform float uLevels;
+uniform float uDitherMode;
+uniform float uDitherScale;
+uniform float uSteps;
+uniform float uPaper;
+uniform vec3 uCanvasDark;
+uniform vec3 uInkDark;
+uniform vec3 uCanvasLight;
+uniform vec3 uInkLight;
+uniform vec3 uAccent;
 
-// Smooth procedural value noise for domain-warped raymarch elevation
+const int MAX_STEPS = 96;
+const float MAX_DIST = 16.0;
+
+mat2 rotate2d(float a) {
+    float s = sin(a);
+    float c = cos(a);
+    return mat2(c, -s, s, c);
+}
+
 float hash21(vec2 p) {
-    p = fract(p * vec2(234.34, 435.345));
-    p += dot(p, p + 34.23);
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
     return fract(p.x * p.y);
 }
 
-float noise2d(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-
-    float a = hash21(i);
-    float b = hash21(i + vec2(1.0, 0.0));
-    float c = hash21(i + vec2(0.0, 1.0));
-    float d = hash21(i + vec2(1.0, 1.0));
-
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+float sdRoundBox(vec3 p, vec3 b, float r) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - r;
 }
 
-float fbm(vec2 p) {
-    float value = 0.0;
-    float amp = 0.5;
-    mat2 rot = mat2(0.80, 0.60, -0.60, 0.80);
-
-    for (int i = 0; i < 4; i++) {
-        value += amp * noise2d(p);
-        p = rot * p * 2.02;
-        amp *= 0.5;
-    }
-
-    return value;
+float smoothUnion(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+    return mix(b, a, h) - k * h * (1.0 - h);
 }
 
-// Signed distance field for an undulating topographic industrial plane
-float fieldSdf(vec3 pos, float t) {
-    vec2 warp = vec2(
-        fbm(pos.xz * 0.48 + vec2(t * 0.14, -t * 0.09)),
-        fbm(pos.xz * 0.48 + vec2(-t * 0.11, t * 0.12) + 3.7)
+float mapField(vec3 p) {
+    vec3 q = p;
+    q.xz = rotate2d(0.22 * sin(uTime * 0.06) + uPointer.x * 0.30) * q.xz;
+    q.xy = rotate2d(0.14 * cos(uTime * 0.045) - uPointer.y * 0.20) * q.xy;
+    float t = uTime * 0.11;
+    float slabA = sdRoundBox(q - vec3(0.55 * sin(t), 0.30 * cos(t * 0.8) + 0.10, 0.0), vec3(1.45, 0.20, 0.95), 0.30);
+    float slabB = sdRoundBox(q - vec3(-0.95, -0.45 + 0.22 * sin(t * 1.25), 0.55), vec3(0.48, 0.52, 1.25), 0.34);
+    float floorWave = q.y + 1.20 + 0.20 * sin(q.x * 1.05 + t) * cos(q.z * 0.85 - t * 0.7);
+    return smoothUnion(smoothUnion(slabA, slabB, 0.80), floorWave, 0.95);
+}
+
+vec3 fieldNormal(vec3 p) {
+    vec2 k = vec2(1.0, -1.0);
+    float e = 0.0028;
+    return normalize(
+        k.xyy * mapField(p + k.xyy * e) +
+        k.yyx * mapField(p + k.yyx * e) +
+        k.yxy * mapField(p + k.yxy * e) +
+        k.xxx * mapField(p + k.xxx * e)
     );
-    float ridge = fbm(pos.xz * 0.62 + warp * 1.45 - vec2(0.0, uScroll * 0.35));
-    float elevation = (ridge - 0.5) * 1.15;
-    return pos.y - elevation;
 }
 
-// Analytic 8x8 Ordered Bayer threshold matrix (0..1) via recursive 2x2 quadrant subdivision
-float bayer8x8(vec2 fragCoord) {
-    vec2 p = mod(floor(fragCoord), 8.0);
-    float acc = 0.0;
-    float scale = 32.0;
-
-    for (int level = 0; level < 3; level++) {
-        vec2 bit = mod(floor(p / exp2(float(2 - level))), 2.0);
-        float quad = 0.0;
-        if (bit.x < 0.5 && bit.y < 0.5) {
-            quad = 0.0;
-        } else if (bit.x > 0.5 && bit.y > 0.5) {
-            quad = 1.0;
-        } else if (bit.x < 0.5 && bit.y > 0.5) {
-            quad = 2.0;
-        } else {
-            quad = 3.0;
-        }
-        acc += quad * scale;
-        scale *= 0.25;
+float ambientOcclusion(vec3 p, vec3 n) {
+    float occ = 0.0;
+    float sca = 1.0;
+    for (int i = 0; i < 5; i++) {
+        float h = 0.02 + 0.14 * float(i);
+        occ += (h - mapField(p + n * h)) * sca;
+        sca *= 0.72;
     }
+    return clamp(1.0 - 1.6 * occ, 0.0, 1.0);
+}
 
-    return (acc + 0.5) / 64.0;
+float backgroundLuma(vec2 uv) {
+    return 0.028 + 0.055 * smoothstep(-1.10, 1.00, uv.y) + 0.030 * exp(-pow((uv.y + 0.18) * 3.2, 2.0));
+}
+
+float marchLuma(vec2 uv, float stepBudget) {
+    vec3 ro = vec3(0.10 * sin(uTime * 0.05), 0.34 + 0.08 * cos(uTime * 0.043), -4.60);
+    vec3 rd = normalize(vec3(uv.x, uv.y, 1.62));
+    float travel = 0.0;
+    float hit = 0.0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        if (float(i) >= stepBudget) break;
+        float sceneDistance = mapField(ro + rd * travel);
+        if (sceneDistance < 0.0022 * travel) {
+            hit = 1.0;
+            break;
+        }
+        travel += sceneDistance * 0.85;
+        if (travel > MAX_DIST) break;
+    }
+    float bg = backgroundLuma(uv);
+    if (hit < 0.5) return bg;
+
+    vec3 sp = ro + rd * travel;
+    vec3 sn = fieldNormal(sp);
+    vec3 key = normalize(vec3(-0.58, 0.72, -0.38));
+    float diffuse = clamp(dot(sn, key), 0.0, 1.0);
+    float rim = pow(clamp(1.0 + dot(sn, rd), 0.0, 1.0), 2.6);
+    float spec = pow(clamp(dot(reflect(rd, sn), key), 0.0, 1.0), 26.0);
+    float ao = ambientOcclusion(sp, sn);
+    float shaded = 0.055 + 0.70 * diffuse * ao + 0.20 * rim * ao + 0.34 * spec;
+    return clamp(mix(bg, shaded, exp(-0.017 * travel * travel)), 0.0, 1.0);
+}
+
+float bayer2(vec2 a) {
+    a = floor(a);
+    return fract(dot(a, vec2(0.5, a.y * 0.75)));
+}
+
+float bayer4(vec2 a) {
+    return bayer2(0.5 * a) * 0.25 + bayer2(a);
+}
+
+float bayer8(vec2 a) {
+    return bayer4(0.5 * a) * 0.25 + bayer2(a);
+}
+
+float quantise(float v, float th, float lv) {
+    float bands = max(lv - 1.0, 1.0);
+    return clamp(floor(v * bands + th) / bands, 0.0, 1.0);
+}
+
+float diffusionLuma(vec2 pixel, vec2 uv, float base) {
+    vec2 texel = 2.0 / uResolution;
+    float dir = mod(floor(pixel.y), 2.0) < 0.5 ? 1.0 : -1.0;
+    float ns = max(floor(uSteps * 0.42), 14.0);
+    float n1 = marchLuma(uv + vec2(-dir, 0.0) * texel, ns);
+    float n2 = marchLuma(uv + vec2(0.0, -1.0) * texel, ns);
+    float n3 = marchLuma(uv + vec2(dir, -1.0) * texel, ns);
+    float n4 = marchLuma(uv + vec2(-dir, -1.0) * texel, ns);
+    float err =
+        (n1 - quantise(n1, 0.5, uLevels)) * 0.4375 +
+        (n2 - quantise(n2, 0.5, uLevels)) * 0.3125 +
+        (n3 - quantise(n3, 0.5, uLevels)) * 0.1875 +
+        (n4 - quantise(n4, 0.5, uLevels)) * 0.0625;
+    return clamp(base + err * 0.90, 0.0, 1.0);
 }
 
 void main() {
-    float t = mix(uTime * 0.12, 1.35, uReducedMotion);
+    vec2 pixel = gl_FragCoord.xy;
+    vec2 uv = (2.0 * pixel - uResolution) / max(uResolution.y, 1.0);
+    float aspect = uResolution.x / max(uResolution.y, 1.0);
 
-    vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
-    vec2 uv = (vUv - 0.5) * aspect;
+    float luma = marchLuma(uv, uSteps);
+    luma = clamp(luma * uIntensity * mix(0.72, 1.18, smoothstep(-aspect, aspect, uv.x)), 0.0, 1.0);
+    luma = clamp(luma + (hash21(pixel + fract(uTime) * vec2(91.7, 57.3)) - 0.5) * uGrain, 0.0, 1.0);
 
-    // Subtle pointer parallax camera offset
-    vec2 pointerShift = (uPointer - 0.5) * 0.28 * (1.0 - uReducedMotion);
+    float threshold = bayer8(pixel / max(uDitherScale, 1.0));
+    float shaped = luma;
+    float activeTh = threshold;
 
-    vec3 rayOrigin = vec3(pointerShift.x, 2.35, 3.1 + pointerShift.y);
-    vec3 rayDir = normalize(vec3(uv.x, uv.y - 0.52, -1.35));
-
-    // Compact raymarch against the topographic SDF
-    float travel = 0.0;
-    float hitDensity = 0.0;
-
-    for (int stepIdx = 0; stepIdx < 28; stepIdx++) {
-        vec3 samplePos = rayOrigin + rayDir * travel;
-        float dist = fieldSdf(samplePos, t);
-
-        if (dist < 0.015) {
-            hitDensity = clamp(1.0 - travel / 11.0, 0.0, 1.0);
-            break;
-        }
-
-        travel += max(dist * 0.65, 0.12);
-        if (travel > 11.0) {
-            break;
-        }
+    if (uDitherMode > 1.5) {
+        shaped = diffusionLuma(pixel, uv, luma);
+        activeTh = 0.5;
+    } else if (uDitherMode < 0.5) {
+        activeTh = 0.5;
     }
 
-    // Secondary tonal gradient field for smooth industrial depth
-    vec2 gradCoord = uv * 1.45 + vec2(t * 0.18, -uScroll * 0.18);
-    float tonalWave = fbm(gradCoord + fbm(gradCoord * 1.35));
-    float radialAttenuation = 1.0 - smoothstep(0.15, 1.15, length(uv - pointerShift * 0.4));
+    float tone = uDitherMode < 0.5 ? shaped : quantise(shaped, activeTh, uLevels);
+    float seam = exp(-pow((uv.y - 0.12 * sin(uTime * 0.07)) * 5.0, 2.0));
+    float accentTone = quantise(smoothstep(0.52, 0.96, luma) * (0.30 + 0.70 * seam) * uAmber, fract(threshold + 0.37), 3.0);
 
-    float luminance = clamp(
-        hitDensity * 0.52 + tonalWave * 0.34 + radialAttenuation * 0.18,
-        0.0,
-        1.0
-    );
+    vec3 canvasColour = mix(uCanvasDark, uCanvasLight, uPaper);
+    vec3 inkColour = mix(uInkDark, uInkLight, uPaper);
+    vec3 colour = mix(canvasColour, inkColour, tone);
+    colour = mix(colour, mix(uAccent, inkColour, 0.12 * uPaper), clamp(accentTone, 0.0, 1.0) * 0.90);
 
-    // 8x8 Ordered Bayer dithering quantized into crisp tonal steps
-    float threshold = bayer8x8(gl_FragCoord.xy);
-    float levels = 5.0;
-    float dithered = floor(luminance * levels + threshold) / levels;
+    float vig = 1.0 - 0.28 * pow(clamp(length(uv * vec2(0.42, 0.62)), 0.0, 1.0), 2.2);
+    colour *= mix(vig, 1.0, uPaper * 0.60);
 
-    // Strictly near-monochrome Industrial Editorial Dark palette (#0C0D0F -> #181B20)
-    // with restrained Industrial Amber (#D97706) warmth capped well below 18% luminance
-    vec3 obsidian = vec3(0.047, 0.051, 0.059);   // #0C0D0F
-    vec3 graphite = vec3(0.118, 0.133, 0.161);   // #1E2229
-    vec3 amberTint = vec3(0.851, 0.467, 0.024);  // #D97706
-
-    vec3 baseColor = mix(obsidian, graphite, dithered * 0.82);
-
-    // Subtle amber highlight strictly on peak dither ridges
-    float amberMask = smoothstep(0.68, 1.0, dithered) * radialAttenuation * 0.14;
-    vec3 color = mix(baseColor, amberTint, amberMask);
-
-    // Procedural animated film grain (0.04 amplitude)
-    float grainTime = mix(floor(uTime * 24.0), 0.0, uReducedMotion);
-    float grain = (hash21(gl_FragCoord.xy + grainTime * 17.13) - 0.5) * 0.042;
-    color = clamp(color + grain, obsidian * 0.92, vec3(0.32));
-
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(colour, 1.0);
 }

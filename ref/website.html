@@ -1,0 +1,3644 @@
+<!doctype html>
+<!--
+  PREVIEW FIX: the previous deliverable was a multi-file Laravel 13 / Docker / MySQL / PHP project.
+  The browser preview sandbox cannot execute PHP, Composer, Docker or MySQL, so it reported "Preview failed".
+  This single-file build runs the Phase 1 public experience directly: WebGL raymarched field + Bayer 8x8
+  dithering + grain, Lenis/GSAP choreography, live render console, paper contrast shift — all CDN-only.
+-->
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="utf-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <meta name="color-scheme" content="dark light" />
+        <meta name="theme-color" content="#0C0D0F" />
+        <meta
+            name="description"
+            content="Manoj Shrestha — Senior Full-Stack Software Engineer. Enterprise SaaS & industrial automation architecture."
+        />
+        <title>
+            Manoj Shrestha — Senior Full-Stack Engineer · Enterprise SaaS &
+            Industrial Automation
+        </title>
+        <style>
+            @import url("https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5/index.css");
+            @import url("https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5/index.css");
+            @import url("https://cdn.jsdelivr.net/npm/@fontsource/archivo-black@5/400.css");
+
+            :root {
+                --canvas: #0c0d0f;
+                --surface: #121417;
+                --ink: #ededef;
+                --muted: #a7abb4;
+                --faint: #6e7480;
+                --rule: #23272f;
+                --rule-bright: #333a45;
+                --accent: #d97706;
+                --amber: #d97706;
+                --amber-soft: #f0a24b;
+                --danger: #b4442e;
+                --success: #3f8f5b;
+                --warning: #c2870b;
+                --info: #4a6d8c;
+                --nav-h: 4.25rem;
+                --font-display: "Archivo Black", "Arial Black", sans-serif;
+                --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+                --font-mono:
+                    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace,
+                    monospace;
+                --ease: cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            html {
+                scroll-behavior: smooth;
+                scrollbar-width: thin;
+                scrollbar-color: var(--rule-bright) var(--canvas);
+            }
+            html.lenis,
+            html.lenis body {
+                height: auto;
+            }
+            .lenis.lenis-smooth {
+                scroll-behavior: auto !important;
+            }
+            .lenis.lenis-stopped {
+                overflow: hidden;
+            }
+            body {
+                background: var(--canvas);
+                color: var(--ink);
+                font-family: var(--font-sans);
+                overflow-x: hidden;
+                -webkit-font-smoothing: antialiased;
+                transition:
+                    background-color 0.6s var(--ease),
+                    color 0.6s var(--ease);
+            }
+            [id] {
+                scroll-margin-top: calc(var(--nav-h) + 1.5rem);
+            }
+            ::selection {
+                background: var(--amber);
+                color: #0c0d0f;
+            }
+            :focus-visible {
+                outline: 2px solid var(--accent);
+                outline-offset: 3px;
+            }
+            ::-webkit-scrollbar {
+                width: 11px;
+                height: 11px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--canvas);
+                border-left: 1px solid var(--rule);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--rule-bright);
+                border: 3px solid var(--canvas);
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--accent);
+            }
+            ::-webkit-scrollbar-corner {
+                background: var(--canvas);
+            }
+            button {
+                font: inherit;
+                color: inherit;
+                background: none;
+                border: none;
+                cursor: pointer;
+            }
+            a {
+                color: inherit;
+                text-decoration: none;
+            }
+
+            .mono {
+                font-family: var(--font-mono);
+                font-size: 0.6875rem;
+                letter-spacing: 0.26em;
+                text-transform: uppercase;
+                line-height: 1.4;
+            }
+            .display {
+                font-family: var(--font-display);
+                letter-spacing: -0.045em;
+                line-height: 0.84;
+                text-transform: uppercase;
+            }
+            .outline-txt {
+                color: transparent;
+                -webkit-text-stroke: 1.25px var(--ink);
+                paint-order: stroke fill;
+            }
+
+            /* ---------- fixed layers ---------- */
+            #field-host {
+                position: fixed;
+                inset: 0;
+                z-index: 0;
+            }
+            #field-host canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+                image-rendering: pixelated;
+                image-rendering: crisp-edges;
+            }
+            .field-fallback {
+                position: absolute;
+                inset: 0;
+                background-color: #0c0d0f;
+                background-image:
+                    radial-gradient(
+                        circle at 1px 1px,
+                        rgba(237, 239, 239, 0.2) 1px,
+                        transparent 1.4px
+                    ),
+                    linear-gradient(
+                        115deg,
+                        #0c0d0f 0%,
+                        #16191d 46%,
+                        #0c0d0f 100%
+                    );
+                background-size:
+                    4px 4px,
+                    100% 100%;
+            }
+            #grid-layer {
+                position: fixed;
+                inset: 0;
+                z-index: 1;
+                pointer-events: none;
+                opacity: 0.55;
+                background-image:
+                    linear-gradient(
+                        to right,
+                        color-mix(in srgb, var(--rule) 78%, transparent) 1px,
+                        transparent 1px
+                    ),
+                    linear-gradient(
+                        to bottom,
+                        color-mix(in srgb, var(--rule) 55%, transparent) 1px,
+                        transparent 1px
+                    );
+                background-size: 96px 96px;
+            }
+            #grain {
+                position: fixed;
+                inset: -18%;
+                z-index: 2;
+                pointer-events: none;
+                mix-blend-mode: screen;
+                opacity: 0.045;
+                background-repeat: repeat;
+                animation: grain-drift 0.72s steps(1, end) infinite;
+                will-change: transform;
+            }
+            html[data-theme="paper"] #grain {
+                mix-blend-mode: multiply;
+            }
+            @keyframes grain-drift {
+                0% {
+                    transform: translate3d(0, 0, 0);
+                }
+                25% {
+                    transform: translate3d(-2.5%, 1.8%, 0);
+                }
+                50% {
+                    transform: translate3d(2.2%, -2.4%, 0);
+                }
+                75% {
+                    transform: translate3d(-1.6%, -1.2%, 0);
+                }
+                100% {
+                    transform: translate3d(0, 0, 0);
+                }
+            }
+
+            /* ---------- header ---------- */
+            header {
+                position: fixed;
+                inset: 0 0 auto 0;
+                z-index: 40;
+                height: var(--nav-h);
+                border-bottom: 1px solid transparent;
+                transition:
+                    background-color 0.3s,
+                    border-color 0.3s;
+            }
+            header.scrolled {
+                background: color-mix(in srgb, var(--canvas) 94%, transparent);
+                border-color: var(--rule);
+            }
+            .header-in {
+                max-width: 1680px;
+                margin: 0 auto;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1.5rem;
+                padding: 0 1.25rem;
+            }
+            .wordmark {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            .wordmark .box {
+                width: 2rem;
+                height: 2rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid var(--accent);
+                color: var(--accent);
+                font-family: var(--font-mono);
+                font-size: 11px;
+                transition: 0.2s;
+            }
+            .wordmark:hover .box {
+                background: var(--amber);
+                color: #0c0d0f;
+                border-color: var(--amber);
+            }
+            .wordmark .name {
+                color: var(--muted);
+                transition: color 0.2s;
+            }
+            .wordmark:hover .name {
+                color: var(--ink);
+            }
+            nav.desktop {
+                display: none;
+                align-items: center;
+                gap: 1.6rem;
+            }
+            nav.desktop button {
+                position: relative;
+                padding: 0.5rem 0;
+                color: var(--faint);
+                transition: color 0.2s;
+            }
+            nav.desktop button:hover {
+                color: var(--muted);
+            }
+            nav.desktop button.active {
+                color: var(--ink);
+            }
+            nav.desktop button::after {
+                content: "";
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 1px;
+                background: var(--accent);
+                transform: scaleX(0);
+                transform-origin: left;
+                transition: transform 0.3s var(--ease);
+            }
+            nav.desktop button.active::after {
+                transform: scaleX(1);
+            }
+            .header-actions {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            #menu-btn {
+                width: 2.25rem;
+                height: 2.25rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1px solid var(--rule);
+                color: var(--muted);
+                transition: 0.2s;
+            }
+            #menu-btn:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+            #mobile-nav {
+                display: grid;
+                grid-template-rows: 0fr;
+                transition: grid-template-rows 0.35s var(--ease);
+                background: var(--canvas);
+                border-bottom: 1px solid transparent;
+                overflow: hidden;
+            }
+            #mobile-nav.open {
+                grid-template-rows: 1fr;
+                border-color: var(--rule);
+            }
+            #mobile-nav > div {
+                min-height: 0;
+                overflow: hidden;
+            }
+            #mobile-nav button {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                text-align: left;
+                padding: 1rem 1.25rem;
+                border-bottom: 1px solid var(--rule);
+                color: var(--muted);
+            }
+            #mobile-nav button:last-child {
+                border-bottom: none;
+            }
+            #mobile-nav button:hover {
+                color: var(--accent);
+            }
+            #mobile-nav button span {
+                color: var(--faint);
+            }
+            @media (min-width: 960px) {
+                nav.desktop {
+                    display: flex;
+                }
+                #menu-btn {
+                    display: none;
+                }
+                #mobile-nav {
+                    display: none;
+                }
+            }
+
+            /* ---------- buttons ---------- */
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                white-space: nowrap;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.22em;
+                text-transform: uppercase;
+                height: 2.5rem;
+                padding: 0 1.25rem;
+                border: 1px solid var(--rule);
+                color: var(--ink);
+                transition:
+                    background-color 0.2s,
+                    color 0.2s,
+                    border-color 0.2s,
+                    transform 0.15s;
+            }
+            .btn:active {
+                transform: translateY(1px);
+            }
+            .btn.lg {
+                height: 3rem;
+                padding: 0 1.75rem;
+                font-size: 12px;
+            }
+            .btn.sm {
+                height: 2rem;
+                padding: 0 0.8rem;
+                font-size: 10px;
+            }
+            .btn.solid {
+                background: var(--amber);
+                border-color: var(--amber);
+                color: #0c0d0f;
+            }
+            .btn.solid:hover {
+                background: var(--amber-soft);
+                border-color: var(--amber-soft);
+            }
+            .btn.outline:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+            .btn.ghost {
+                border-color: transparent;
+                color: var(--muted);
+            }
+            .btn.ghost:hover {
+                color: var(--ink);
+                border-color: var(--rule);
+            }
+            .btn:disabled {
+                opacity: 0.4;
+                pointer-events: none;
+            }
+            .magnetic {
+                display: inline-block;
+                will-change: transform;
+            }
+
+            /* ---------- layout ---------- */
+            main {
+                position: relative;
+                z-index: 10;
+            }
+            .wrap {
+                max-width: 1680px;
+                margin: 0 auto;
+                width: 100%;
+            }
+            section {
+                position: relative;
+            }
+            .eyebrow {
+                color: var(--accent);
+            }
+            .rule-top {
+                border-top: 1px solid var(--rule);
+            }
+
+            /* ---------- hero ---------- */
+            #overview {
+                min-height: 100svh;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                padding: calc(var(--nav-h) + 2.5rem) 1.25rem 2rem;
+            }
+            .hero-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+                align-items: start;
+                flex: 1;
+            }
+            .hero-meta {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem 1rem;
+            }
+            .hero-meta .dash {
+                width: 2.5rem;
+                height: 1px;
+                background: var(--rule-bright);
+            }
+            .hero-meta .region {
+                color: var(--faint);
+            }
+            h1 {
+                margin-top: 1.75rem;
+                font-size: clamp(3.4rem, 12.4vw, 11.5rem);
+                color: var(--ink);
+            }
+            .line-mask {
+                display: block;
+                overflow: hidden;
+            }
+            .line-mask > span {
+                display: block;
+            }
+            .hero-role {
+                margin-top: 2rem;
+                max-width: 62ch;
+                border-left: 1px solid var(--accent);
+                padding-left: 1.25rem;
+            }
+            .hero-role .r1 {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: var(--ink);
+            }
+            .hero-role .r2 {
+                margin-top: 0.5rem;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: var(--accent);
+            }
+            .hero-role p {
+                margin-top: 1.25rem;
+                font-size: 15px;
+                line-height: 1.7;
+                color: var(--muted);
+            }
+            .hero-ctas {
+                margin-top: 2.25rem;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+                align-items: center;
+            }
+            .ledger {
+                margin-top: 3rem;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1px;
+                background: var(--rule);
+                border-top: 1px solid var(--rule);
+            }
+            .ledger > div {
+                background: var(--canvas);
+                padding: 1.25rem 1rem;
+                transition: background-color 0.6s var(--ease);
+            }
+            .ledger .v {
+                font-size: clamp(1.9rem, 3.4vw, 2.9rem);
+                color: var(--ink);
+            }
+            .ledger .l {
+                margin-top: 0.75rem;
+                color: var(--muted);
+            }
+            .ledger .n {
+                margin-top: 0.4rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--faint);
+            }
+            @media (min-width: 960px) {
+                #overview {
+                    padding-left: 2rem;
+                    padding-right: 2rem;
+                }
+                .hero-grid {
+                    grid-template-columns: repeat(12, 1fr);
+                    gap: 3rem;
+                }
+                .hero-left {
+                    grid-column: span 7;
+                }
+                .hero-right {
+                    grid-column: span 5;
+                }
+                .ledger {
+                    grid-template-columns: repeat(4, 1fr);
+                }
+                .ledger > div {
+                    padding: 1.25rem 1.5rem;
+                }
+            }
+            @media (min-width: 1400px) {
+                .hero-left {
+                    grid-column: span 8;
+                }
+                .hero-right {
+                    grid-column: span 4;
+                }
+            }
+
+            /* ---------- render console ---------- */
+            #render-console {
+                background: var(--surface);
+                border: 1px solid var(--rule);
+                position: relative;
+                padding: 1.4rem;
+                transition:
+                    border-color 0.3s,
+                    background-color 0.6s var(--ease);
+            }
+            #render-console::before {
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 1px;
+                background: linear-gradient(
+                    90deg,
+                    var(--amber) 0%,
+                    transparent 42%
+                );
+                opacity: 0.75;
+            }
+            #render-console.flash {
+                border-color: var(--accent);
+            }
+            .console-head {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 1rem;
+                border-bottom: 1px solid var(--rule);
+                padding-bottom: 1rem;
+            }
+            .console-head h2 {
+                color: var(--ink);
+            }
+            .console-head .sub {
+                margin-top: 0.4rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--faint);
+            }
+            .state-badge {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            .state-dot {
+                width: 6px;
+                height: 6px;
+                background: var(--success);
+            }
+            .state-dot.paused {
+                background: var(--warning);
+            }
+            .seg-label {
+                display: block;
+                color: var(--faint);
+                margin-bottom: 0.6rem;
+            }
+            .seg {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1px;
+                background: var(--rule);
+            }
+            .seg button {
+                background: color-mix(in srgb, var(--surface) 60%, #0c0d0f);
+                padding: 0.65rem 0.25rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--faint);
+                transition: 0.2s;
+            }
+            .seg button:hover {
+                color: var(--ink);
+            }
+            .seg button[aria-pressed="true"] {
+                background: #20160a;
+                color: var(--amber);
+            }
+            html[data-theme="paper"] .seg button[aria-pressed="true"] {
+                background: #ebd9bf;
+                color: #8f4e04;
+            }
+            .ctl {
+                padding: 0.65rem 0;
+                border-bottom: 1px solid var(--rule);
+            }
+            .ctl-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+            }
+            .ctl-row label {
+                color: var(--faint);
+            }
+            .ctl-row output {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                color: var(--accent);
+            }
+            input[type="range"] {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 100%;
+                height: 18px;
+                background: transparent;
+                cursor: ew-resize;
+                margin-top: 0.35rem;
+            }
+            input[type="range"]::-webkit-slider-runnable-track {
+                height: 2px;
+                background: var(--rule-bright);
+            }
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 12px;
+                height: 12px;
+                margin-top: -5px;
+                background: var(--ink);
+                border: 1px solid var(--canvas);
+                transition:
+                    background 0.15s,
+                    transform 0.15s;
+            }
+            input[type="range"]:hover::-webkit-slider-thumb,
+            input[type="range"]:focus-visible::-webkit-slider-thumb {
+                background: var(--accent);
+                transform: scale(1.18);
+            }
+            input[type="range"]::-moz-range-track {
+                height: 2px;
+                background: var(--rule-bright);
+            }
+            input[type="range"]::-moz-range-thumb {
+                width: 12px;
+                height: 12px;
+                border-radius: 0;
+                background: var(--ink);
+                border: 1px solid var(--canvas);
+            }
+            input[type="range"]:hover::-moz-range-thumb {
+                background: var(--accent);
+            }
+            .select-wrap {
+                position: relative;
+                margin-top: 0.6rem;
+            }
+            select {
+                appearance: none;
+                -webkit-appearance: none;
+                width: 100%;
+                background: color-mix(in srgb, var(--surface) 60%, #0c0d0f);
+                border: 1px solid var(--rule);
+                color: var(--ink);
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                padding: 0.55rem 1.9rem 0.55rem 0.6rem;
+                cursor: pointer;
+                transition: border-color 0.2s;
+            }
+            select:hover {
+                border-color: var(--rule-bright);
+            }
+            .select-wrap svg {
+                position: absolute;
+                right: 0.6rem;
+                top: 50%;
+                transform: translateY(-50%);
+                pointer-events: none;
+                color: var(--faint);
+            }
+            .switch-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.55rem 0;
+            }
+            .switch-row span {
+                color: var(--faint);
+            }
+            .switch {
+                position: relative;
+                width: 2.5rem;
+                height: 1.25rem;
+                border: 1px solid var(--rule);
+                background: color-mix(in srgb, var(--surface) 60%, #0c0d0f);
+                transition: 0.2s;
+                flex-shrink: 0;
+            }
+            .switch::after {
+                content: "";
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 0.75rem;
+                height: 0.75rem;
+                background: var(--faint);
+                transition: 0.2s var(--ease);
+            }
+            .switch[aria-checked="true"] {
+                border-color: var(--accent);
+                background: #2a1c07;
+            }
+            .switch[aria-checked="true"]::after {
+                transform: translateX(20px);
+                background: var(--amber);
+            }
+            html[data-theme="paper"] .switch[aria-checked="true"] {
+                background: #ebd9bf;
+            }
+            .console-actions {
+                display: flex;
+                gap: 0.5rem;
+                padding-top: 1rem;
+                border-top: 1px solid var(--rule);
+            }
+            .console-actions .btn {
+                flex: 1;
+            }
+            .console-mini {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.4rem 1.25rem;
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid var(--rule);
+            }
+            .console-mini span {
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--faint);
+            }
+            .console-mini b {
+                font-weight: 400;
+                color: var(--muted);
+                margin-left: 0.4rem;
+            }
+
+            /* ---------- kinetic band ---------- */
+            #kinetic {
+                overflow: hidden;
+                padding: 4rem 0;
+                border-top: 1px solid var(--rule);
+                border-bottom: 1px solid var(--rule);
+            }
+            .kinetic-row {
+                white-space: nowrap;
+                font-size: clamp(3.2rem, 9vw, 8.5rem);
+                will-change: transform;
+                line-height: 1;
+            }
+            .kinetic-row .rep {
+                padding-right: 3rem;
+            }
+            .kinetic-row.r2 {
+                margin-top: 1.25rem;
+            }
+
+            /* ---------- capability ---------- */
+            #capability {
+                padding: 6rem 1.25rem;
+            }
+            .band-head {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: flex-end;
+                justify-content: space-between;
+                gap: 1.5rem;
+                border-bottom: 1px solid var(--rule);
+                padding-bottom: 1.5rem;
+            }
+            .band-head h2 {
+                margin-top: 1rem;
+                font-size: clamp(2.2rem, 6vw, 4.6rem);
+                color: var(--ink);
+            }
+            .band-head p {
+                max-width: 42ch;
+                font-size: 0.875rem;
+                line-height: 1.7;
+                color: var(--muted);
+            }
+            .cap-row {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 1.25rem;
+                padding: 2rem 0;
+                border-bottom: 1px solid var(--rule);
+                transition: background-color 0.25s var(--ease);
+            }
+            .cap-row:hover {
+                background: color-mix(in srgb, var(--surface) 75%, transparent);
+            }
+            .cap-title {
+                display: flex;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .cap-rule {
+                width: 1px;
+                height: 3.5rem;
+                background: var(--rule-bright);
+                flex-shrink: 0;
+                margin-top: 0.25rem;
+                transform: scaleY(0.18);
+                transform-origin: top;
+                transition:
+                    transform 0.4s var(--ease),
+                    background-color 0.25s;
+            }
+            .cap-row:hover .cap-rule {
+                transform: scaleY(1);
+                background: var(--accent);
+            }
+            .cap-idx {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.24em;
+                color: var(--faint);
+            }
+            .cap-title h3 {
+                margin-top: 0.5rem;
+                font-size: 1.1rem;
+                line-height: 1.4;
+                font-weight: 600;
+                color: var(--ink);
+            }
+            .cap-spec {
+                font-size: 0.875rem;
+                line-height: 1.7;
+                color: var(--muted);
+            }
+            .cap-metric .m {
+                font-size: clamp(1.6rem, 3vw, 2.4rem);
+                color: var(--accent);
+            }
+            .cap-metric .ml {
+                margin-top: 0.5rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                line-height: 1.6;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--faint);
+            }
+            @media (min-width: 960px) {
+                #capability {
+                    padding: 8rem 2rem;
+                }
+                .cap-row {
+                    grid-template-columns: repeat(12, 1fr);
+                    gap: 2rem;
+                }
+                .cap-title {
+                    grid-column: span 5;
+                }
+                .cap-spec {
+                    grid-column: span 5;
+                }
+                .cap-metric {
+                    grid-column: span 2;
+                    text-align: right;
+                }
+            }
+
+            /* ---------- systems index ---------- */
+            #systems {
+                padding: 6rem 1.25rem;
+                border-top: 1px solid var(--rule);
+            }
+            .sys-row {
+                position: relative;
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 1rem;
+                align-items: center;
+                padding: 1.6rem 0;
+                border-bottom: 1px solid var(--rule);
+                cursor: default;
+                transition: background-color 0.25s;
+            }
+            .sys-row:hover {
+                background: color-mix(in srgb, var(--surface) 75%, transparent);
+            }
+            .sys-idx {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.2em;
+                color: var(--faint);
+                width: 2.5rem;
+            }
+            .sys-name h3 {
+                font-size: 1rem;
+                font-weight: 600;
+                color: var(--ink);
+                line-height: 1.4;
+            }
+            .sys-name .repo {
+                margin-top: 0.35rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.16em;
+                color: var(--accent);
+            }
+            .sys-marquee {
+                grid-column: 1/-1;
+                overflow: hidden;
+                -webkit-mask-image: linear-gradient(
+                    90deg,
+                    transparent,
+                    #000 8%,
+                    #000 92%,
+                    transparent
+                );
+                mask-image: linear-gradient(
+                    90deg,
+                    transparent,
+                    #000 8%,
+                    #000 92%,
+                    transparent
+                );
+            }
+            .sys-track {
+                display: inline-flex;
+                white-space: nowrap;
+                will-change: transform;
+                animation: sys-scroll 14s linear infinite;
+                animation-play-state: paused;
+            }
+            .sys-row:hover .sys-track,
+            .sys-row:focus-within .sys-track {
+                animation-play-state: running;
+            }
+            .sys-track span {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.22em;
+                text-transform: uppercase;
+                color: var(--muted);
+                padding-right: 2.5rem;
+            }
+            .sys-track span em {
+                font-style: normal;
+                color: var(--accent);
+            }
+            @keyframes sys-scroll {
+                to {
+                    transform: translateX(-50%);
+                }
+            }
+            @media (hover: none) {
+                .sys-track {
+                    animation-play-state: running;
+                    animation-duration: 22s;
+                }
+            }
+            @media (min-width: 960px) {
+                #systems {
+                    padding: 8rem 2rem;
+                }
+                .sys-row {
+                    grid-template-columns: 2.5rem 5fr 6fr;
+                    gap: 2rem;
+                }
+                .sys-marquee {
+                    grid-column: auto;
+                }
+            }
+            #reveal {
+                position: fixed;
+                z-index: 35;
+                width: 340px;
+                pointer-events: none;
+                opacity: 0;
+                background: #121417;
+                border: 1px solid #23272f;
+                clip-path: inset(0 0 100% 0);
+                transition:
+                    clip-path 0.45s var(--ease),
+                    opacity 0.3s;
+            }
+            #reveal.on {
+                opacity: 1;
+                clip-path: inset(0 0 0 0);
+            }
+            #reveal .plate-head {
+                display: flex;
+                justify-content: space-between;
+                padding: 0.6rem 0.8rem;
+                border-bottom: 1px solid #23272f;
+                font-family: var(--font-mono);
+                font-size: 9px;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: #6e7480;
+            }
+            #reveal .plate-head b {
+                color: #d97706;
+                font-weight: 400;
+            }
+            #reveal .plate {
+                display: none;
+            }
+            #reveal .plate.active {
+                display: block;
+            }
+            #reveal svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+            @media (hover: none), (max-width: 959px) {
+                #reveal {
+                    display: none;
+                }
+            }
+
+            /* ---------- research (paper band) ---------- */
+            #research {
+                padding: 7rem 1.25rem;
+                border-top: 1px solid var(--rule);
+            }
+            .art-row {
+                border-bottom: 1px solid var(--rule);
+            }
+            .art-btn {
+                display: grid;
+                grid-template-columns: 2.75rem 1fr auto;
+                gap: 1rem;
+                align-items: baseline;
+                width: 100%;
+                text-align: left;
+                padding: 1.4rem 0;
+                transition: color 0.2s;
+            }
+            .art-btn .num {
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.2em;
+                color: var(--faint);
+                transition: color 0.2s;
+            }
+            .art-btn:hover .num,
+            .art-btn[aria-expanded="true"] .num {
+                color: var(--accent);
+            }
+            .art-btn h3 {
+                font-size: clamp(1.05rem, 2.2vw, 1.5rem);
+                font-weight: 600;
+                line-height: 1.35;
+                color: var(--ink);
+            }
+            .art-btn .tag {
+                font-family: var(--font-mono);
+                font-size: 9px;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+                color: var(--faint);
+                border: 1px solid var(--rule);
+                padding: 0.3rem 0.55rem;
+                white-space: nowrap;
+            }
+            .art-btn .chev {
+                transition: transform 0.3s var(--ease);
+                color: var(--faint);
+            }
+            .art-btn[aria-expanded="true"] .chev {
+                transform: rotate(45deg);
+                color: var(--accent);
+            }
+            .art-body {
+                display: grid;
+                grid-template-rows: 0fr;
+                transition: grid-template-rows 0.4s var(--ease);
+            }
+            .art-body.open {
+                grid-template-rows: 1fr;
+            }
+            .art-body > div {
+                min-height: 0;
+                overflow: hidden;
+            }
+            .art-body p {
+                padding: 0 0 1.5rem 3.75rem;
+                max-width: 72ch;
+                font-size: 0.9rem;
+                line-height: 1.75;
+                color: var(--muted);
+            }
+            @media (min-width: 960px) {
+                #research {
+                    padding: 9rem 2rem;
+                }
+            }
+
+            /* ---------- field spec ---------- */
+            #field {
+                padding: 6rem 1.25rem;
+                border-top: 1px solid var(--rule);
+            }
+            .field-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+            .field-left h2 {
+                margin-top: 1rem;
+                font-size: clamp(2.2rem, 6vw, 4.6rem);
+                color: var(--ink);
+            }
+            .field-left > p {
+                margin-top: 1.5rem;
+                max-width: 40ch;
+                font-size: 0.875rem;
+                line-height: 1.7;
+                color: var(--muted);
+            }
+            .persist-note {
+                margin-top: 2rem;
+                border: 1px solid var(--rule);
+                background: var(--surface);
+                padding: 1rem;
+                transition: background-color 0.6s var(--ease);
+            }
+            .persist-note p {
+                margin-top: 0.5rem;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                line-height: 1.7;
+                color: var(--muted);
+            }
+            .spec-row {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.6rem;
+                padding: 1.5rem 0;
+                border-bottom: 1px solid var(--rule);
+            }
+            .spec-row dt {
+                color: var(--ink);
+                padding-top: 0.15rem;
+            }
+            .spec-row dd {
+                font-size: 0.875rem;
+                line-height: 1.7;
+                color: var(--muted);
+            }
+            .telemetry {
+                margin-top: 2.5rem;
+            }
+            .telemetry-grid {
+                margin-top: 1rem;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1px;
+                background: var(--rule);
+                border: 1px solid var(--rule);
+            }
+            .telemetry-grid > div {
+                background: var(--surface);
+                padding: 1rem;
+                transition: background-color 0.6s var(--ease);
+            }
+            .telemetry-grid dt {
+                color: var(--faint);
+            }
+            .telemetry-grid dd {
+                margin-top: 0.5rem;
+                font-family: var(--font-mono);
+                font-size: 0.85rem;
+                color: var(--ink);
+            }
+            @media (min-width: 960px) {
+                #field {
+                    padding: 8rem 2rem;
+                }
+                .field-grid {
+                    grid-template-columns: repeat(12, 1fr);
+                }
+                .field-left {
+                    grid-column: span 4;
+                    position: sticky;
+                    top: calc(var(--nav-h) + 2.5rem);
+                    align-self: start;
+                }
+                .field-right {
+                    grid-column: span 8;
+                }
+                .spec-row {
+                    grid-template-columns: repeat(12, 1fr);
+                    gap: 1.5rem;
+                }
+                .spec-row dt {
+                    grid-column: span 3;
+                }
+                .spec-row dd {
+                    grid-column: span 9;
+                }
+                .telemetry-grid {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            /* ---------- footer ---------- */
+            footer {
+                position: relative;
+                z-index: 10;
+                border-top: 1px solid var(--rule);
+                background: var(--canvas);
+                padding: 4rem 1.25rem;
+                transition: background-color 0.6s var(--ease);
+            }
+            .foot-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+            .foot-name {
+                font-size: clamp(1.8rem, 4vw, 3rem);
+                color: var(--ink);
+            }
+            .foot-role {
+                margin-top: 1.25rem;
+                color: var(--faint);
+            }
+            .foot-disc {
+                margin-top: 0.5rem;
+                color: var(--accent);
+            }
+            .chips {
+                margin-top: 1rem;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem 0.6rem;
+                list-style: none;
+            }
+            .chips li {
+                border: 1px solid var(--rule);
+                padding: 0.3rem 0.6rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            .foot-runtime {
+                margin-top: 1.25rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--faint);
+                line-height: 1.8;
+            }
+            .foot-right {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.25rem;
+            }
+            .clock {
+                font-family: var(--font-mono);
+                font-size: 1.5rem;
+                color: var(--ink);
+                font-variant-numeric: tabular-nums;
+                margin-top: 0.5rem;
+            }
+            .foot-base {
+                margin-top: 3rem;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                gap: 1rem;
+                border-top: 1px solid var(--rule);
+                padding-top: 1.5rem;
+                font-family: var(--font-mono);
+                font-size: 10px;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                color: var(--faint);
+            }
+            @media (min-width: 960px) {
+                footer {
+                    padding: 4rem 2rem;
+                }
+                .foot-grid {
+                    grid-template-columns: repeat(12, 1fr);
+                }
+                .foot-grid > div:nth-child(1) {
+                    grid-column: span 5;
+                }
+                .foot-grid > div:nth-child(2) {
+                    grid-column: span 4;
+                }
+                .foot-grid > div:nth-child(3) {
+                    grid-column: span 3;
+                    align-items: flex-end;
+                    text-align: right;
+                }
+                .foot-right {
+                    align-items: flex-end;
+                }
+            }
+            .skip {
+                position: absolute;
+                left: -9999px;
+                top: 0;
+            }
+            .skip:focus {
+                left: 0.75rem;
+                top: 0.75rem;
+                z-index: 60;
+                background: var(--canvas);
+                border: 1px solid var(--accent);
+                color: var(--accent);
+                padding: 0.6rem 1rem;
+                font-family: var(--font-mono);
+                font-size: 11px;
+                letter-spacing: 0.2em;
+                text-transform: uppercase;
+            }
+            noscript .ns {
+                position: fixed;
+                inset: auto 0 0 0;
+                z-index: 99;
+                background: #b4442e;
+                color: #ededef;
+                padding: 1rem;
+                text-align: center;
+                font-family: var(--font-mono);
+                font-size: 12px;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                html {
+                    scroll-behavior: auto;
+                }
+                #grain,
+                .sys-track {
+                    animation: none;
+                }
+                *,
+                *::before,
+                *::after {
+                    transition-duration: 0.001ms !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <a class="skip" href="#overview">Skip to content</a>
+        <noscript
+            ><div class="ns">
+                JavaScript is required for the WebGL field and live console.
+                Content remains readable below.
+            </div></noscript
+        >
+
+        <div id="field-host" aria-hidden="true">
+            <div class="field-fallback" id="field-fallback"></div>
+        </div>
+        <div id="grid-layer" aria-hidden="true"></div>
+        <div id="grain" aria-hidden="true"></div>
+
+        <header id="site-header">
+            <div class="header-in">
+                <button class="wordmark" id="brand" aria-label="Back to top">
+                    <span class="box">MS</span
+                    ><span class="mono name">Manoj Shrestha</span>
+                </button>
+                <nav class="desktop mono" aria-label="Section navigation">
+                    <button data-goto="overview" class="active">
+                        Overview
+                    </button>
+                    <button data-goto="capability">Capability</button>
+                    <button data-goto="systems">Systems</button>
+                    <button data-goto="research">Research</button>
+                    <button data-goto="field">Field</button>
+                    <button data-goto="colophon">Colophon</button>
+                </nav>
+                <div class="header-actions">
+                    <span class="magnetic" data-magnetic
+                        ><button
+                            class="btn outline sm"
+                            data-goto="render-console"
+                        >
+                            Render console
+                        </button></span
+                    >
+                    <button
+                        id="menu-btn"
+                        aria-expanded="false"
+                        aria-controls="mobile-nav"
+                        aria-label="Open navigation"
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                        >
+                            <path d="M2 4h12M2 8h12M2 12h12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="mobile-nav">
+                <div>
+                    <button class="mono" data-goto="overview">
+                        Overview <span>01</span>
+                    </button>
+                    <button class="mono" data-goto="capability">
+                        Capability <span>02</span>
+                    </button>
+                    <button class="mono" data-goto="systems">
+                        Systems <span>03</span>
+                    </button>
+                    <button class="mono" data-goto="research">
+                        Research <span>04</span>
+                    </button>
+                    <button class="mono" data-goto="field">
+                        Field <span>05</span>
+                    </button>
+                    <button class="mono" data-goto="render-console">
+                        Render console <span>◎</span>
+                    </button>
+                    <button class="mono" data-goto="colophon">
+                        Colophon <span>06</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- ============ HERO ============ -->
+            <section id="overview">
+                <div class="wrap hero-grid">
+                    <div class="hero-left">
+                        <div class="hero-meta" data-hero="0">
+                            <span class="mono eyebrow"
+                                >Portfolio · Edition 01</span
+                            >
+                            <span class="dash"></span>
+                            <span class="mono region">Nepal · UTC+05:45</span>
+                        </div>
+                        <h1 class="display">
+                            <span class="line-mask"
+                                ><span data-hero-line>Manoj</span></span
+                            >
+                            <span class="line-mask"
+                                ><span data-hero-line class="outline-txt"
+                                    >Shrestha</span
+                                ></span
+                            >
+                        </h1>
+                        <div class="hero-role" data-hero="1">
+                            <div class="r1">
+                                Senior Full-Stack Software Engineer
+                            </div>
+                            <div class="r2">
+                                Enterprise SaaS &amp; Industrial Automation
+                                Architect
+                            </div>
+                            <p>
+                                I build the systems that sit between enterprise
+                                software and physical machinery: multi-tenant
+                                SaaS platforms, streaming ingestion pipelines
+                                and hardware bridges that dispense pigment to
+                                1/192 of a fluid ounce.
+                            </p>
+                        </div>
+                        <div class="hero-ctas" data-hero="2">
+                            <span class="magnetic" data-magnetic
+                                ><button
+                                    class="btn solid lg"
+                                    data-goto="capability"
+                                >
+                                    Inspect capability
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 14 14"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.6"
+                                    >
+                                        <path d="M3 3h8v8M3 11L11 3" />
+                                    </svg></button
+                            ></span>
+                            <span class="magnetic" data-magnetic
+                                ><button
+                                    class="btn outline lg"
+                                    data-goto="field"
+                                >
+                                    Field specification
+                                </button></span
+                            >
+                        </div>
+                    </div>
+
+                    <div class="hero-right" data-hero="3">
+                        <section
+                            id="render-console"
+                            aria-label="Dithered field render console"
+                        >
+                            <div class="console-head">
+                                <div>
+                                    <h2 class="mono">Field console</h2>
+                                    <div class="sub">
+                                        Raymarch → threshold → grain
+                                    </div>
+                                </div>
+                                <span class="state-badge"
+                                    ><span
+                                        class="state-dot"
+                                        id="console-dot"
+                                    ></span
+                                    ><span id="console-state"
+                                        >Animating</span
+                                    ></span
+                                >
+                            </div>
+
+                            <div class="ctl" style="padding-top: 1rem">
+                                <span class="mono seg-label"
+                                    >Threshold kernel</span
+                                >
+                                <div
+                                    class="seg"
+                                    role="group"
+                                    aria-label="Dither kernel"
+                                >
+                                    <button
+                                        data-dither="bayer8"
+                                        aria-pressed="true"
+                                    >
+                                        Bayer 8×8
+                                    </button>
+                                    <button
+                                        data-dither="diffusion"
+                                        aria-pressed="false"
+                                    >
+                                        Diffusion
+                                    </button>
+                                    <button
+                                        data-dither="off"
+                                        aria-pressed="false"
+                                    >
+                                        Continuous
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="ctl">
+                                <div class="ctl-row">
+                                    <label class="mono" for="ctl-levels"
+                                        >Quantisation bands</label
+                                    ><output id="val-levels">5</output>
+                                </div>
+                                <input
+                                    id="ctl-levels"
+                                    type="range"
+                                    min="2"
+                                    max="8"
+                                    step="1"
+                                    value="5"
+                                />
+                            </div>
+                            <div class="ctl">
+                                <div class="ctl-row">
+                                    <label class="mono" for="ctl-intensity"
+                                        >Field intensity</label
+                                    ><output id="val-intensity">1.00</output>
+                                </div>
+                                <input
+                                    id="ctl-intensity"
+                                    type="range"
+                                    min="0.35"
+                                    max="1.75"
+                                    step="0.01"
+                                    value="1"
+                                />
+                            </div>
+                            <div class="ctl">
+                                <div class="ctl-row">
+                                    <label class="mono" for="ctl-grain"
+                                        >Film grain</label
+                                    ><output id="val-grain">0.060</output>
+                                </div>
+                                <input
+                                    id="ctl-grain"
+                                    type="range"
+                                    min="0"
+                                    max="0.16"
+                                    step="0.005"
+                                    value="0.06"
+                                />
+                            </div>
+                            <div class="ctl">
+                                <div class="ctl-row">
+                                    <label class="mono" for="ctl-amber"
+                                        >Amber accent</label
+                                    ><output id="val-amber">0.16</output>
+                                </div>
+                                <input
+                                    id="ctl-amber"
+                                    type="range"
+                                    min="0"
+                                    max="0.5"
+                                    step="0.01"
+                                    value="0.16"
+                                />
+                            </div>
+
+                            <div class="ctl">
+                                <label class="mono seg-label" for="ctl-quality"
+                                    >Render budget</label
+                                >
+                                <div class="select-wrap">
+                                    <select id="ctl-quality">
+                                        <option value="low">
+                                            Low · 0.38 MP · 40 steps
+                                        </option>
+                                        <option value="balanced" selected>
+                                            Balanced · 0.85 MP · 62 steps
+                                        </option>
+                                        <option value="high">
+                                            High · 1.50 MP · 84 steps
+                                        </option>
+                                    </select>
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 14 14"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                    >
+                                        <path d="M3 5l4 4 4-4" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div
+                                class="ctl"
+                                style="
+                                    border-bottom: none;
+                                    padding-bottom: 0.25rem;
+                                "
+                            >
+                                <div class="switch-row">
+                                    <span class="mono">Animation loop</span>
+                                    <button
+                                        class="switch"
+                                        id="sw-motion"
+                                        role="switch"
+                                        aria-checked="true"
+                                        aria-label="Toggle field animation"
+                                    ></button>
+                                </div>
+                                <div class="switch-row">
+                                    <span class="mono">Pointer parallax</span>
+                                    <button
+                                        class="switch"
+                                        id="sw-parallax"
+                                        role="switch"
+                                        aria-checked="true"
+                                        aria-label="Toggle pointer parallax"
+                                    ></button>
+                                </div>
+                            </div>
+
+                            <div class="console-actions">
+                                <button class="btn ghost sm" id="btn-reset">
+                                    Reset
+                                </button>
+                                <button class="btn outline sm" id="btn-random">
+                                    Randomize
+                                </button>
+                                <button class="btn outline sm" id="btn-export">
+                                    Export PNG
+                                </button>
+                            </div>
+
+                            <div class="console-mini">
+                                <span>FPS<b id="mini-fps">—</b></span>
+                                <span>Buffer<b id="mini-buffer">—</b></span>
+                                <span
+                                    >Kernel<b id="mini-mode">Bayer 8×8</b></span
+                                >
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <div class="wrap ledger" data-hero="4">
+                    <div>
+                        <div class="display v">6+</div>
+                        <div class="mono l">Years in production</div>
+                        <div class="n">Enterprise SaaS &amp; automation</div>
+                    </div>
+                    <div>
+                        <div class="display v">13</div>
+                        <div class="mono l">Enterprise repositories</div>
+                        <div class="n">Owned end to end</div>
+                    </div>
+                    <div>
+                        <div class="display v">10</div>
+                        <div class="mono l">Paint brands deployed</div>
+                        <div class="n">Nepal-wide network</div>
+                    </div>
+                    <div>
+                        <div class="display v">500+</div>
+                        <div class="mono l">Dealer terminals</div>
+                        <div class="n">Live dispensing endpoints</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ KINETIC TYPOGRAPHY ============ -->
+            <section id="kinetic" aria-hidden="true">
+                <div class="kinetic-row display" id="kinetic-1">
+                    <span class="rep"
+                        >Enterprise SaaS — Industrial Automation — Multi-Tenant
+                        Laravel —</span
+                    ><span class="rep"
+                        >Enterprise SaaS — Industrial Automation — Multi-Tenant
+                        Laravel —</span
+                    >
+                </div>
+                <div class="kinetic-row r2 display outline-txt" id="kinetic-2">
+                    <span class="rep"
+                        >RS-232 Dispensing · Streaming ETL · HMAC Gateways · BS
+                        ↔ AD Ephemeris ·</span
+                    ><span class="rep"
+                        >RS-232 Dispensing · Streaming ETL · HMAC Gateways · BS
+                        ↔ AD Ephemeris ·</span
+                    >
+                </div>
+            </section>
+
+            <!-- ============ CAPABILITY ============ -->
+            <section id="capability">
+                <div class="wrap">
+                    <div class="band-head">
+                        <div>
+                            <span class="mono eyebrow">02 — Capability</span>
+                            <h2 class="display">Flagship architectures</h2>
+                        </div>
+                        <p>
+                            Four systems carrying production load across
+                            manufacturing floors, dealer counters and
+                            multi-tenant field operations.
+                        </p>
+                    </div>
+                    <ol style="list-style: none">
+                        <li class="cap-row" data-reveal>
+                            <div class="cap-title">
+                                <span class="cap-rule"></span>
+                                <div>
+                                    <span class="cap-idx">01</span>
+                                    <h3>
+                                        Industrial Paint Formulation &amp;
+                                        Dispensing Automation Suite
+                                    </h3>
+                                </div>
+                            </div>
+                            <p class="cap-spec">
+                                Streaming ETL, 3D Euclidean RGB colour matching
+                                and an RS-232 / FFM bridge driving Santint,
+                                Corob and Hero robotic dispensers at 1/192 fl oz
+                                resolution. Deployed across 10 paint brands —
+                                Apollo, Pashupati, Everest Colour Spectra,
+                                Kanchanjunga, Siddhartha and more — powering
+                                500+ dealer terminals.
+                            </p>
+                            <div class="cap-metric">
+                                <div class="display m">&lt;45s</div>
+                                <div class="ml">
+                                    100,000+ Excel formula cells on 64MB RAM ·
+                                    95% runtime reduction
+                                </div>
+                            </div>
+                        </li>
+                        <li class="cap-row" data-reveal>
+                            <div class="cap-title">
+                                <span class="cap-rule"></span>
+                                <div>
+                                    <span class="cap-idx">02</span>
+                                    <h3>
+                                        FieldMA Enterprise Multi-Tenant SaaS
+                                        Evolution
+                                    </h3>
+                                </div>
+                            </div>
+                            <p class="cap-spec">
+                                Database-per-tenant on Laravel 13 +
+                                stancl/tenancy. Uniform schemas with middleware
+                                feature gating replaced the early-return
+                                migration trap; the mobile API surface was cut
+                                from 80 to 39 typed endpoints — 51% dead-route
+                                elimination — with real-time GPS tracking and
+                                cash denomination auditing.
+                            </p>
+                            <div class="cap-metric">
+                                <div class="display m">&lt;5 min</div>
+                                <div class="ml">
+                                    Tenant onboarding, previously 3 days
+                                </div>
+                            </div>
+                        </li>
+                        <li class="cap-row" data-reveal>
+                            <div class="cap-title">
+                                <span class="cap-rule"></span>
+                                <div>
+                                    <span class="cap-idx">03</span>
+                                    <h3>
+                                        Algorithmic Bikram Sambat to Gregorian
+                                        Date Engine
+                                    </h3>
+                                </div>
+                            </div>
+                            <p class="cap-spec">
+                                A 91-year astronomical ephemeris (2000–2090 BS)
+                                anchored at 2000-09-17 BS ↔ 1944-01-01 AD,
+                                delivering sub-millisecond conversion with a
+                                zero-dependency Devanagari UI datepicker.
+                            </p>
+                            <div class="cap-metric">
+                                <div class="display m">91 yrs</div>
+                                <div class="ml">
+                                    Ephemeris coverage · sub-millisecond
+                                    conversion
+                                </div>
+                            </div>
+                        </li>
+                        <li class="cap-row" data-reveal>
+                            <div class="cap-title">
+                                <span class="cap-rule"></span>
+                                <div>
+                                    <span class="cap-idx">04</span>
+                                    <h3>
+                                        Bihani Subscription System — Zero-Trust
+                                        Licensing Gateway
+                                    </h3>
+                                </div>
+                            </div>
+                            <p class="cap-spec">
+                                HMAC SHA-256 request signing, Redis nonce
+                                caching at 600s TTL, a 300-second timestamp
+                                drift defence against replay attacks, and MD5
+                                state-version hashing for remote entitlement
+                                cache invalidation.
+                            </p>
+                            <div class="cap-metric">
+                                <div class="display m">300 s</div>
+                                <div class="ml">Replay-attack drift window</div>
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- ============ SYSTEMS INDEX ============ -->
+            <section id="systems">
+                <div class="wrap">
+                    <div class="band-head">
+                        <div>
+                            <span class="mono eyebrow">03 — Systems index</span>
+                            <h2 class="display">Secondary systems</h2>
+                        </div>
+                        <p>
+                            Hover a row to run its keyword marquee and lift the
+                            architecture plate. Touch devices run the marquee
+                            continuously.
+                        </p>
+                    </div>
+                    <div id="sys-list">
+                        <div class="sys-row" data-plate="0" tabindex="0">
+                            <span class="sys-idx">S·01</span>
+                            <div class="sys-name">
+                                <h3>
+                                    Multi-Tenant Painter Loyalty &amp;
+                                    Anti-Counterfeit QR Platform
+                                </h3>
+                                <div class="repo">painter / neply-bPainter</div>
+                            </div>
+                            <div class="sys-marquee">
+                                <div class="sys-track">
+                                    <span
+                                        >Issued → Dispatched → Scanned →
+                                        Collected → <em>Verified</em> · 5-stage
+                                        QR finite state machine ·
+                                        <em>Qrscam</em> fraud trap ·&nbsp;</span
+                                    >
+                                    <span
+                                        >Issued → Dispatched → Scanned →
+                                        Collected → <em>Verified</em> · 5-stage
+                                        QR finite state machine ·
+                                        <em>Qrscam</em> fraud trap ·&nbsp;</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sys-row" data-plate="1" tabindex="0">
+                            <span class="sys-idx">S·02</span>
+                            <div class="sys-name">
+                                <h3>
+                                    NYEF Enterprise Community &amp; Event Portal
+                                </h3>
+                                <div class="repo">nyef-web</div>
+                            </div>
+                            <div class="sys-marquee">
+                                <div class="sys-track">
+                                    <span
+                                        >Multi-chapter <em>Spatie RBAC</em> ·
+                                        Ably WebSocket chat · Google FCM · QR
+                                        ticket verification ·&nbsp;</span
+                                    >
+                                    <span
+                                        >Multi-chapter <em>Spatie RBAC</em> ·
+                                        Ably WebSocket chat · Google FCM · QR
+                                        ticket verification ·&nbsp;</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sys-row" data-plate="2" tabindex="0">
+                            <span class="sys-idx">S·03</span>
+                            <div class="sys-name">
+                                <h3>Circular Fashion Consignment Platform</h3>
+                                <div class="repo">thrift-store</div>
+                            </div>
+                            <div class="sys-marquee">
+                                <div class="sys-track">
+                                    <span
+                                        >MySQL <em>insert triggers</em> ·
+                                        inventory codes · dual-pricing
+                                        <em>margin ledgers</em> · consignment
+                                        lifecycle ·&nbsp;</span
+                                    >
+                                    <span
+                                        >MySQL <em>insert triggers</em> ·
+                                        inventory codes · dual-pricing
+                                        <em>margin ledgers</em> · consignment
+                                        lifecycle ·&nbsp;</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sys-row" data-plate="3" tabindex="0">
+                            <span class="sys-idx">S·04</span>
+                            <div class="sys-name">
+                                <h3>WP Everest Security Overhaul</h3>
+                                <div class="repo">wp-everest</div>
+                            </div>
+                            <div class="sys-marquee">
+                                <div class="sys-track">
+                                    <span
+                                        ><em>6-phase OWASP</em> remediation ·
+                                        Bcrypt migration · parameterized PDO ·
+                                        PHP 8.5-FPM Dockerization ·&nbsp;</span
+                                    >
+                                    <span
+                                        ><em>6-phase OWASP</em> remediation ·
+                                        Bcrypt migration · parameterized PDO ·
+                                        PHP 8.5-FPM Dockerization ·&nbsp;</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- floating architecture plates -->
+            <div id="reveal" aria-hidden="true">
+                <div class="plate-head">
+                    <span>Architecture plate</span><b id="reveal-idx">S·01</b>
+                </div>
+                <div class="plate active" data-plate-id="0">
+                    <svg
+                        viewBox="0 0 340 210"
+                        font-family="JetBrains Mono Variable, monospace"
+                    >
+                        <text
+                            x="16"
+                            y="24"
+                            font-size="8.5"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            QR FINITE STATE MACHINE — 5 STAGES
+                        </text>
+                        <g stroke="#3A414D" fill="none">
+                            <rect x="12" y="58" width="56" height="26" />
+                            <rect x="78" y="58" width="56" height="26" />
+                            <rect x="144" y="58" width="56" height="26" />
+                            <rect x="210" y="58" width="56" height="26" />
+                            <rect
+                                x="276"
+                                y="58"
+                                width="56"
+                                height="26"
+                                stroke="#D97706"
+                            />
+                            <path d="M68 71h10M134 71h10M200 71h10M266 71h10" />
+                            <path
+                                d="M74 68l4 3-4 3M140 68l4 3-4 3M206 68l4 3-4 3M272 68l4 3-4 3"
+                                stroke="#D97706"
+                            />
+                            <path
+                                d="M172 84v46"
+                                stroke="#B4442E"
+                                stroke-dasharray="3 3"
+                            />
+                            <rect
+                                x="144"
+                                y="130"
+                                width="56"
+                                height="24"
+                                stroke="#B4442E"
+                            />
+                        </g>
+                        <g
+                            font-size="6.6"
+                            letter-spacing=".5"
+                            fill="#A7ABB4"
+                            text-anchor="middle"
+                        >
+                            <text x="40" y="74">ISSUED</text>
+                            <text x="106" y="74">DISPATCHED</text>
+                            <text x="172" y="74">SCANNED</text>
+                            <text x="238" y="74">COLLECTED</text>
+                            <text x="304" y="74" fill="#D97706">VERIFIED</text>
+                            <text x="172" y="145" fill="#B4442E">QRSCAM</text>
+                        </g>
+                        <text
+                            x="210"
+                            y="145"
+                            font-size="7"
+                            letter-spacing="1"
+                            fill="#B4442E"
+                        >
+                            ← FRAUD TRAP
+                        </text>
+                        <text
+                            x="16"
+                            y="192"
+                            font-size="8"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            painter / neply-bPainter
+                        </text>
+                    </svg>
+                </div>
+                <div class="plate" data-plate-id="1">
+                    <svg
+                        viewBox="0 0 340 210"
+                        font-family="JetBrains Mono Variable, monospace"
+                    >
+                        <text
+                            x="16"
+                            y="24"
+                            font-size="8.5"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            MULTI-CHAPTER EVENT PORTAL
+                        </text>
+                        <g stroke="#3A414D" fill="none">
+                            <circle cx="170" cy="108" r="27" stroke="#D97706" />
+                            <rect x="24" y="44" width="82" height="24" />
+                            <rect x="234" y="44" width="82" height="24" />
+                            <rect x="24" y="148" width="82" height="24" />
+                            <rect x="234" y="148" width="82" height="24" />
+                            <path
+                                d="M106 56l40 34M234 56l-40 34M106 160l40-34M234 160l-40-34"
+                            />
+                        </g>
+                        <g
+                            font-size="6.8"
+                            letter-spacing=".5"
+                            fill="#A7ABB4"
+                            text-anchor="middle"
+                        >
+                            <text x="170" y="111" fill="#D97706">PORTAL</text>
+                            <text x="65" y="59">CHAPTERS·RBAC</text>
+                            <text x="275" y="59">ABLY CHAT</text>
+                            <text x="65" y="163">GOOGLE FCM</text>
+                            <text x="275" y="163">QR TICKETS</text>
+                        </g>
+                        <text
+                            x="16"
+                            y="192"
+                            font-size="8"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            nyef-web · Spatie RBAC · WebSocket
+                        </text>
+                    </svg>
+                </div>
+                <div class="plate" data-plate-id="2">
+                    <svg
+                        viewBox="0 0 340 210"
+                        font-family="JetBrains Mono Variable, monospace"
+                    >
+                        <text
+                            x="16"
+                            y="24"
+                            font-size="8.5"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            TRIGGER-DRIVEN CONSIGNMENT LEDGER
+                        </text>
+                        <g stroke="#3A414D" fill="none">
+                            <rect x="20" y="86" width="72" height="28" />
+                            <rect
+                                x="132"
+                                y="86"
+                                width="80"
+                                height="28"
+                                stroke="#D97706"
+                            />
+                            <rect x="252" y="52" width="72" height="24" />
+                            <rect x="244" y="124" width="84" height="24" />
+                            <path d="M92 100h40M212 100l40-36M212 100l32 36" />
+                            <path
+                                d="M126 97l6 3-6 3M246 61l6 3-6 3M238 133l6 3-6 3"
+                                stroke="#D97706"
+                            />
+                        </g>
+                        <g
+                            font-size="6.8"
+                            letter-spacing=".5"
+                            fill="#A7ABB4"
+                            text-anchor="middle"
+                        >
+                            <text x="56" y="103">INSERT</text>
+                            <text x="172" y="103" fill="#D97706">
+                                MYSQL TRIGGER
+                            </text>
+                            <text x="288" y="67">CODE GEN</text>
+                            <text x="286" y="139">MARGIN LEDGER</text>
+                        </g>
+                        <text
+                            x="16"
+                            y="192"
+                            font-size="8"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            thrift-store · dual-pricing
+                        </text>
+                    </svg>
+                </div>
+                <div class="plate" data-plate-id="3">
+                    <svg
+                        viewBox="0 0 340 210"
+                        font-family="JetBrains Mono Variable, monospace"
+                    >
+                        <text
+                            x="16"
+                            y="24"
+                            font-size="8.5"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            6-PHASE OWASP REMEDIATION
+                        </text>
+                        <g stroke="#3A414D" fill="none">
+                            <rect x="40" y="38" width="212" height="16" />
+                            <rect x="40" y="60" width="212" height="16" />
+                            <rect x="40" y="82" width="212" height="16" />
+                            <rect x="40" y="104" width="212" height="16" />
+                            <rect x="40" y="126" width="212" height="16" />
+                            <rect
+                                x="40"
+                                y="148"
+                                width="212"
+                                height="16"
+                                stroke="#D97706"
+                            />
+                            <path
+                                d="M262 46l4 4 7-8M262 68l4 4 7-8M262 90l4 4 7-8M262 112l4 4 7-8M262 134l4 4 7-8M262 156l4 4 7-8"
+                                stroke="#3F8F5B"
+                            />
+                        </g>
+                        <g font-size="6.6" letter-spacing=".8" fill="#A7ABB4">
+                            <text x="48" y="49">
+                                01 · AUDIT &amp; THREAT MODEL
+                            </text>
+                            <text x="48" y="71">02 · BCRYPT MIGRATION</text>
+                            <text x="48" y="93">03 · PARAMETERIZED PDO</text>
+                            <text x="48" y="115">
+                                04 · HEADERS &amp; SESSION HARDENING
+                            </text>
+                            <text x="48" y="137">05 · PHP 8.5-FPM</text>
+                            <text x="48" y="159" fill="#D97706">
+                                06 · DOCKERIZE &amp; VERIFY
+                            </text>
+                        </g>
+                        <text
+                            x="16"
+                            y="192"
+                            font-size="8"
+                            letter-spacing="1.5"
+                            fill="#6E7480"
+                        >
+                            wp-everest · legacy monolith
+                        </text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- ============ RESEARCH (paper band) ============ -->
+            <section id="research">
+                <div class="wrap">
+                    <div class="band-head">
+                        <div>
+                            <span class="mono eyebrow">04 — Research</span>
+                            <h2 class="display">
+                                Engineering<br />research &amp; writing
+                            </h2>
+                        </div>
+                        <p>
+                            Eight technical essays drawn from the production
+                            record. The band you are reading shifts the entire
+                            canvas from obsidian to archival paper — scroll on
+                            and it returns to dark.
+                        </p>
+                    </div>
+                    <div id="articles"></div>
+                </div>
+            </section>
+
+            <!-- ============ FIELD SPEC ============ -->
+            <section id="field">
+                <div class="wrap field-grid">
+                    <div class="field-left">
+                        <span class="mono eyebrow">05 — Field</span>
+                        <h2 class="display">Render<br />specification</h2>
+                        <p>
+                            The backdrop is not a video or an image. It is a
+                            single persistent WebGL context raymarching a
+                            signed-distance field and quantising it through an
+                            ordered threshold matrix on every frame.
+                        </p>
+                        <div class="persist-note">
+                            <span class="mono" style="color: var(--faint)"
+                                >Persistence</span
+                            >
+                            <p>
+                                In the Laravel build, PublicLayout survives
+                                Inertia navigation — the context is never torn
+                                down between pages. The admin console mounts
+                                without it.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="field-right">
+                        <dl style="border-top: 1px solid var(--rule)">
+                            <div class="spec-row">
+                                <dt class="mono">Geometry</dt>
+                                <dd>
+                                    Signed-distance slabs and an undulating
+                                    floor, smooth-unioned and raymarched with a
+                                    96-step ceiling, tetrahedral normals and
+                                    5-tap ambient occlusion.
+                                </dd>
+                            </div>
+                            <div class="spec-row">
+                                <dt class="mono">Threshold</dt>
+                                <dd>
+                                    Recursive Bayer 8×8 ordered matrix evaluated
+                                    in render-buffer space, so halftone cells
+                                    stay crisp at any device pixel ratio.
+                                </dd>
+                            </div>
+                            <div class="spec-row">
+                                <dt class="mono">Diffusion</dt>
+                                <dd>
+                                    Optional Floyd–Steinberg-inspired serpentine
+                                    pass: 7/16, 5/16, 3/16 and 1/16 error
+                                    weights sampled from four reduced-budget
+                                    neighbour marches.
+                                </dd>
+                            </div>
+                            <div class="spec-row">
+                                <dt class="mono">Grain</dt>
+                                <dd>
+                                    Per-frame hash noise folded into luminance
+                                    before quantisation, plus a procedural
+                                    surface grain composited at 0.035–0.05
+                                    opacity.
+                                </dd>
+                            </div>
+                            <div class="spec-row">
+                                <dt class="mono">Budget</dt>
+                                <dd>
+                                    Device pixel ratio clamped to 2, pixel
+                                    budget capped per quality tier and halved
+                                    for diffusion; the canvas upscales with
+                                    nearest-neighbour filtering.
+                                </dd>
+                            </div>
+                            <div class="spec-row">
+                                <dt class="mono">Lifecycle</dt>
+                                <dd>
+                                    One requestAnimationFrame loop, paused on
+                                    document.hidden and off-screen, static
+                                    single frame under prefers-reduced-motion,
+                                    context-loss recovery and CSS halftone
+                                    fallback.
+                                </dd>
+                            </div>
+                        </dl>
+                        <div class="telemetry">
+                            <span class="mono" style="color: var(--faint)"
+                                >Live telemetry</span
+                            >
+                            <dl class="telemetry-grid">
+                                <div>
+                                    <dt class="mono">State</dt>
+                                    <dd id="tm-state">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">FPS</dt>
+                                    <dd id="tm-fps">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">CPU frame</dt>
+                                    <dd id="tm-ms">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">Buffer</dt>
+                                    <dd id="tm-buffer">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">DPR / scale</dt>
+                                    <dd id="tm-scale">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">March steps</dt>
+                                    <dd id="tm-steps">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">Quantiser</dt>
+                                    <dd id="tm-kernel">—</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">Paper shift</dt>
+                                    <dd id="tm-paper">0%</dd>
+                                </div>
+                                <div>
+                                    <dt class="mono">Context</dt>
+                                    <dd id="tm-ctx">WebGL</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ============ FOOTER ============ -->
+        <footer id="colophon">
+            <div class="wrap foot-grid">
+                <div>
+                    <div class="display foot-name">Manoj<br />Shrestha</div>
+                    <div class="mono foot-role">
+                        Senior Full-Stack Software Engineer
+                    </div>
+                    <div class="mono foot-disc">
+                        Enterprise SaaS &amp; Industrial Automation Architect
+                    </div>
+                </div>
+                <div>
+                    <span class="mono" style="color: var(--faint)"
+                        >Colophon</span
+                    >
+                    <ul class="chips">
+                        <li>Laravel 13</li>
+                        <li>PHP 8.4</li>
+                        <li>Inertia.js</li>
+                        <li>React 19</li>
+                        <li>TypeScript</li>
+                        <li>Tailwind CSS v4</li>
+                        <li>MySQL 8.0</li>
+                        <li>Redis + Horizon</li>
+                        <li>Three.js / GLSL</li>
+                        <li>Docker</li>
+                    </ul>
+                    <p class="foot-runtime">
+                        WebGL · Raymarched SDF · Bayer 8×8<br />Public shell
+                        preview · Phase 1
+                    </p>
+                </div>
+                <div class="foot-right">
+                    <div>
+                        <span class="mono" style="color: var(--faint)"
+                            >Nepal · local time</span
+                        >
+                        <div class="clock" id="clock">—:—:—</div>
+                    </div>
+                    <span class="magnetic" data-magnetic
+                        ><button class="btn ghost sm" id="to-top">
+                            <svg
+                                width="13"
+                                height="13"
+                                viewBox="0 0 13 13"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.6"
+                            >
+                                <path d="M6.5 11V2M2.5 6l4-4 4 4" />
+                            </svg>
+                            Back to top
+                        </button></span
+                    >
+                </div>
+            </div>
+            <div class="wrap foot-base">
+                <span
+                    >© <span id="year"></span> Manoj Shrestha — engineering
+                    record</span
+                >
+                <span>Set in Archivo Black, Inter &amp; JetBrains Mono</span>
+            </div>
+        </footer>
+
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.11/dist/lenis.min.js"></script>
+        <script type="module">
+            /* ================================================================
+   UTILITIES + STATE
+================================================================ */
+            const $ = (s, r = document) => r.querySelector(s);
+            const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+            const clampN = (v, a, b) => Math.min(Math.max(v, a), b);
+            const roundTo = (v, d) => {
+                const f = 10 ** d;
+                return Math.round(v * f) / f;
+            };
+            const smooth01 = (t) => {
+                const x = clampN(t, 0, 1);
+                return x * x * (3 - 2 * x);
+            };
+            const RM = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+            const DEFAULTS = {
+                dither: "bayer8",
+                levels: 5,
+                intensity: 1.0,
+                grain: 0.06,
+                amber: 0.16,
+                quality: "balanced",
+                motion: true,
+                parallax: true,
+            };
+            const DITHER_INDEX = { off: 0, bayer8: 1, diffusion: 2 };
+            const QUALITY = {
+                low: { pixels: 380000, steps: 40 },
+                balanced: { pixels: 850000, steps: 62 },
+                high: { pixels: 1500000, steps: 84 },
+            };
+            const STORAGE_KEY = "ms.field.console.v1";
+
+            function sanitize(c) {
+                return {
+                    dither: ["off", "bayer8", "diffusion"].includes(c.dither)
+                        ? c.dither
+                        : DEFAULTS.dither,
+                    quality: ["low", "balanced", "high"].includes(c.quality)
+                        ? c.quality
+                        : DEFAULTS.quality,
+                    levels: Math.round(
+                        clampN(Number(c.levels ?? DEFAULTS.levels), 2, 8),
+                    ),
+                    intensity: roundTo(
+                        clampN(
+                            Number(c.intensity ?? DEFAULTS.intensity),
+                            0.35,
+                            1.75,
+                        ),
+                        2,
+                    ),
+                    grain: roundTo(
+                        clampN(Number(c.grain ?? DEFAULTS.grain), 0, 0.16),
+                        3,
+                    ),
+                    amber: roundTo(
+                        clampN(Number(c.amber ?? DEFAULTS.amber), 0, 0.5),
+                        2,
+                    ),
+                    motion: Boolean(c.motion ?? DEFAULTS.motion),
+                    parallax: Boolean(c.parallax ?? DEFAULTS.parallax),
+                };
+            }
+            function loadSettings() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    return raw ? sanitize(JSON.parse(raw)) : { ...DEFAULTS };
+                } catch {
+                    return { ...DEFAULTS };
+                }
+            }
+            let settings = loadSettings();
+            const storeListeners = new Set();
+            function setSettings(patch) {
+                settings = sanitize({ ...settings, ...patch });
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+                } catch {}
+                syncUI();
+                storeListeners.forEach((fn) => fn(settings));
+            }
+
+            /* ================================================================
+   CONSOLE UI  (works even if WebGL is unavailable)
+================================================================ */
+            const grainEl = $("#grain");
+            const consolePanel = $("#render-console");
+            const kernelName = () =>
+                settings.dither === "bayer8"
+                    ? "Bayer 8×8"
+                    : settings.dither === "diffusion"
+                      ? "FS diffusion"
+                      : "Continuous";
+
+            function syncUI() {
+                $$(".seg button").forEach((b) =>
+                    b.setAttribute(
+                        "aria-pressed",
+                        String(b.dataset.dither === settings.dither),
+                    ),
+                );
+                $("#ctl-levels").value = settings.levels;
+                $("#val-levels").textContent = String(settings.levels);
+                $("#ctl-intensity").value = settings.intensity;
+                $("#val-intensity").textContent = settings.intensity.toFixed(2);
+                $("#ctl-grain").value = settings.grain;
+                $("#val-grain").textContent = settings.grain.toFixed(3);
+                $("#ctl-amber").value = settings.amber;
+                $("#val-amber").textContent = settings.amber.toFixed(2);
+                $("#ctl-quality").value = settings.quality;
+                $("#sw-motion").setAttribute(
+                    "aria-checked",
+                    String(settings.motion),
+                );
+                $("#sw-parallax").setAttribute(
+                    "aria-checked",
+                    String(settings.parallax),
+                );
+                $("#mini-mode").textContent = kernelName();
+                $("#console-state").textContent = settings.motion
+                    ? "Animating"
+                    : "Frozen";
+                $("#console-dot").classList.toggle("paused", !settings.motion);
+                grainEl.style.opacity = (
+                    0.035 +
+                    clampN(settings.grain / 0.16, 0, 1) * 0.015
+                ).toFixed(3);
+            }
+            function flashConsole() {
+                consolePanel.classList.add("flash");
+                setTimeout(() => consolePanel.classList.remove("flash"), 350);
+            }
+
+            $$(".seg button").forEach((b) =>
+                b.addEventListener("click", () =>
+                    setSettings({ dither: b.dataset.dither }),
+                ),
+            );
+            $("#ctl-levels").addEventListener("input", (e) =>
+                setSettings({ levels: Number(e.target.value) }),
+            );
+            $("#ctl-intensity").addEventListener("input", (e) =>
+                setSettings({ intensity: Number(e.target.value) }),
+            );
+            $("#ctl-grain").addEventListener("input", (e) =>
+                setSettings({ grain: Number(e.target.value) }),
+            );
+            $("#ctl-amber").addEventListener("input", (e) =>
+                setSettings({ amber: Number(e.target.value) }),
+            );
+            $("#ctl-quality").addEventListener("change", (e) =>
+                setSettings({ quality: e.target.value }),
+            );
+            $("#sw-motion").addEventListener("click", () =>
+                setSettings({ motion: !settings.motion }),
+            );
+            $("#sw-parallax").addEventListener("click", () =>
+                setSettings({ parallax: !settings.parallax }),
+            );
+            $("#btn-reset").addEventListener("click", () => {
+                setSettings({ ...DEFAULTS });
+                flashConsole();
+            });
+            $("#btn-random").addEventListener("click", () => {
+                setSettings({
+                    dither: Math.random() < 0.3 ? "diffusion" : "bayer8",
+                    levels: 3 + Math.floor(Math.random() * 4),
+                    intensity: roundTo(0.7 + Math.random() * 0.8, 2),
+                    grain: roundTo(0.02 + Math.random() * 0.1, 3),
+                    amber: roundTo(Math.random() * 0.34, 2),
+                });
+                flashConsole();
+            });
+            let fieldHandle = null;
+            $("#btn-export").addEventListener("click", () => {
+                if (!fieldHandle) return;
+                const btn = $("#btn-export");
+                fieldHandle.exportPNG(
+                    `manoj-shrestha-field_${settings.dither}_${settings.levels}bands.png`,
+                );
+                const prev = btn.textContent;
+                btn.textContent = "Saved ✓";
+                setTimeout(() => {
+                    btn.textContent = prev;
+                }, 1200);
+            });
+            syncUI();
+
+            /* ================================================================
+   RESEARCH ARTICLES  (verified dossier, accordion)
+================================================================ */
+            const ARTICLES = [
+                [
+                    "Bridging Web Software and Industrial Automation via RS-232 & FFM",
+                    "RS-232 / FFM",
+                    "How a browser-adjacent stack reaches a robotic dispenser: serial framing, the FFM command grammar and 1/192 fl oz dosing through Santint, Corob and Hero bridges.",
+                ],
+                [
+                    "Evolving an Enterprise Monolith to Multi-Tenant SaaS in Laravel",
+                    "Multi-tenancy",
+                    "The FieldMA migration path from single-tenant monolith to database-per-tenant on Laravel 13 + stancl/tenancy, cutting client onboarding from 3 days to under 5 minutes.",
+                ],
+                [
+                    "The “Early-Return” Migration Trap in Multi-Tenant Laravel",
+                    "Migrations",
+                    "Why per-tenant early-return guards silently fork schema state, and how uniform schemas with middleware feature gating restore a single migration truth.",
+                ],
+                [
+                    "Engineering a Bikram Sambat to Gregorian Lunisolar Date Engine",
+                    "Date engine",
+                    "Building a 91-year ephemeris (2000–2090 BS) around the 2000-09-17 BS ↔ 1944-01-01 AD anchor for sub-millisecond, zero-dependency conversion with a Devanagari datepicker.",
+                ],
+                [
+                    "Zero-Trust SaaS Licensing: Architecting HMAC Signed Gateways",
+                    "Zero-trust",
+                    "Bihani’s licensing gateway: HMAC SHA-256 request signing, 600s Redis nonces, a 300-second drift window and MD5 state-version entitlement invalidation.",
+                ],
+                [
+                    "High-Throughput Excel Ingestion: Processing 100k Cells on 64MB RAM",
+                    "Streaming ETL",
+                    "Streaming 15+ MB workbooks — 100,000+ formula cells — through a 64MB RAM ceiling in under 45 seconds: a 95% runtime reduction in tint-data-upload-application.",
+                ],
+                [
+                    "Anti-Counterfeit Supply Chain Loyalty: 5-Stage QR State Machines",
+                    "Supply chain",
+                    "Issued → Dispatched → Scanned → Collected → Verified: a five-stage anti-counterfeit state machine with a Qrscam fraud trap, live across the painter loyalty network.",
+                ],
+                [
+                    "Hardening Legacy PHP Monoliths: A Practical 6-Phase OWASP Guide",
+                    "OWASP",
+                    "A six-phase remediation of wp-everest: Bcrypt migration, parameterized PDO, session and header hardening, and PHP 8.5-FPM Dockerization.",
+                ],
+            ];
+            const articlesHost = $("#articles");
+            ARTICLES.forEach(([title, tag, abstract], i) => {
+                const row = document.createElement("div");
+                row.className = "art-row";
+                row.setAttribute("data-reveal", "");
+                row.innerHTML = `
+    <button class="art-btn" aria-expanded="false" aria-controls="art-body-${i}">
+      <span class="num">${String(i + 1).padStart(2, "0")}</span>
+      <h3>${title}</h3>
+      <span style="display:flex;align-items:center;gap:.75rem">
+        <span class="tag">${tag}</span>
+        <svg class="chev" width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 1.5v10M1.5 6.5h10"/></svg>
+      </span>
+    </button>
+    <div class="art-body" id="art-body-${i}"><div><p>${abstract}</p></div></div>`;
+                const btn = row.querySelector(".art-btn"),
+                    body = row.querySelector(".art-body");
+                btn.addEventListener("click", () => {
+                    const open = btn.getAttribute("aria-expanded") === "true";
+                    btn.setAttribute("aria-expanded", String(!open));
+                    body.classList.toggle("open", !open);
+                    if (window.ScrollTrigger)
+                        setTimeout(() => ScrollTrigger.refresh(), 450);
+                });
+                articlesHost.appendChild(row);
+            });
+
+            /* ================================================================
+   NAVIGATION / HEADER / ANCHORS
+================================================================ */
+            const header = $("#site-header");
+            const mobileNav = $("#mobile-nav");
+            const menuBtn = $("#menu-btn");
+            let lenis = null;
+
+            function navOffset() {
+                return -(header.offsetHeight + 18);
+            }
+            function goTo(id) {
+                closeMenu();
+                const target = id === "top" ? 0 : document.getElementById(id);
+                if (target === null) return;
+                if (lenis)
+                    lenis.scrollTo(target, {
+                        offset: typeof target === "number" ? 0 : navOffset(),
+                        duration: 1.15,
+                        force: true,
+                    });
+                else if (typeof target === "number")
+                    window.scrollTo({
+                        top: 0,
+                        behavior: RM.matches ? "auto" : "smooth",
+                    });
+                else {
+                    const top =
+                        target.getBoundingClientRect().top +
+                        window.scrollY +
+                        navOffset();
+                    window.scrollTo({
+                        top: Math.max(top, 0),
+                        behavior: RM.matches ? "auto" : "smooth",
+                    });
+                }
+            }
+            function closeMenu() {
+                mobileNav.classList.remove("open");
+                menuBtn.setAttribute("aria-expanded", "false");
+            }
+            menuBtn.addEventListener("click", () => {
+                const open = !mobileNav.classList.contains("open");
+                mobileNav.classList.toggle("open", open);
+                menuBtn.setAttribute("aria-expanded", String(open));
+                menuBtn.setAttribute(
+                    "aria-label",
+                    open ? "Close navigation" : "Open navigation",
+                );
+            });
+            $$("[data-goto]").forEach((b) =>
+                b.addEventListener("click", () => goTo(b.dataset.goto)),
+            );
+            $("#brand").addEventListener("click", () => goTo("top"));
+            $("#to-top").addEventListener("click", () => goTo("top"));
+
+            window.addEventListener(
+                "scroll",
+                () => header.classList.toggle("scrolled", window.scrollY > 24),
+                { passive: true },
+            );
+            header.classList.toggle("scrolled", window.scrollY > 24);
+
+            const navButtons = $$("nav.desktop button");
+            const sectionObserver = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((en) => {
+                        if (en.isIntersecting)
+                            navButtons.forEach((b) =>
+                                b.classList.toggle(
+                                    "active",
+                                    b.dataset.goto === en.target.id,
+                                ),
+                            );
+                    });
+                },
+                { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+            );
+            [
+                "overview",
+                "capability",
+                "systems",
+                "research",
+                "field",
+                "colophon",
+            ].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) sectionObserver.observe(el);
+            });
+
+            /* ================================================================
+   MAGNETIC BUTTONS  (pointer-fine, max 8px damped)
+================================================================ */
+            if (
+                window.matchMedia("(pointer: fine)").matches &&
+                !RM.matches &&
+                window.gsap
+            ) {
+                $$("[data-magnetic]").forEach((wrap) => {
+                    const qx = gsap.quickTo(wrap, "x", {
+                        duration: 0.4,
+                        ease: "power3",
+                    });
+                    const qy = gsap.quickTo(wrap, "y", {
+                        duration: 0.4,
+                        ease: "power3",
+                    });
+                    wrap.addEventListener("pointermove", (e) => {
+                        const r = wrap.getBoundingClientRect();
+                        qx(
+                            clampN(
+                                (e.clientX - (r.left + r.width / 2)) * 0.28,
+                                -8,
+                                8,
+                            ),
+                        );
+                        qy(
+                            clampN(
+                                (e.clientY - (r.top + r.height / 2)) * 0.34,
+                                -8,
+                                8,
+                            ),
+                        );
+                    });
+                    wrap.addEventListener("pointerleave", () => {
+                        qx(0);
+                        qy(0);
+                    });
+                });
+            }
+
+            /* ================================================================
+   SYSTEMS HOVER PLATES  (desktop pointer-fine)
+================================================================ */
+            const reveal = $("#reveal");
+            if (window.matchMedia("(pointer: fine)").matches) {
+                const plates = $$("#reveal .plate");
+                let revealRaf = 0,
+                    rx = 0,
+                    ry = 0,
+                    tx = 0,
+                    ty = 0,
+                    revealOn = false;
+                const revealLoop = () => {
+                    if (!revealOn) {
+                        revealRaf = 0;
+                        return;
+                    }
+                    rx += (tx - rx) * 0.16;
+                    ry += (ty - ry) * 0.16;
+                    reveal.style.transform = `translate3d(${rx}px, ${ry}px, 0)`;
+                    revealRaf = requestAnimationFrame(revealLoop);
+                };
+                const place = (e) => {
+                    tx = clampN(e.clientX + 26, 12, window.innerWidth - 356);
+                    ty = clampN(e.clientY - 110, 76, window.innerHeight - 250);
+                };
+                $$(".sys-row").forEach((row) => {
+                    row.addEventListener("pointerenter", (e) => {
+                        const idx = Number(row.dataset.plate);
+                        plates.forEach((p) =>
+                            p.classList.toggle(
+                                "active",
+                                Number(p.dataset.plateId) === idx,
+                            ),
+                        );
+                        $("#reveal-idx").textContent = `S·0${idx + 1}`;
+                        place(e);
+                        rx = tx;
+                        ry = ty;
+                        reveal.classList.add("on");
+                        revealOn = true;
+                        if (!revealRaf)
+                            revealRaf = requestAnimationFrame(revealLoop);
+                    });
+                    row.addEventListener("pointermove", place);
+                    row.addEventListener("pointerleave", () => {
+                        reveal.classList.remove("on");
+                        revealOn = false;
+                    });
+                });
+            }
+
+            /* ================================================================
+   PAPER CONTRAST SHIFT  (CSS variables + shader uPaper)
+================================================================ */
+            const PAPER_PAIRS = {
+                "--canvas": ["#0C0D0F", "#F4F3EF"],
+                "--surface": ["#121417", "#ECEAE3"],
+                "--ink": ["#EDEDEF", "#14161A"],
+                "--muted": ["#A7ABB4", "#4A4E57"],
+                "--faint": ["#6E7480", "#6B685E"],
+                "--rule": ["#23272F", "#D9D6CC"],
+                "--rule-bright": ["#333A45", "#C4C0B4"],
+                "--accent": ["#D97706", "#8F4E04"],
+            };
+            const hexRGB = (h) => [
+                parseInt(h.slice(1, 3), 16),
+                parseInt(h.slice(3, 5), 16),
+                parseInt(h.slice(5, 7), 16),
+            ];
+            const PARSED = Object.entries(PAPER_PAIRS).map(([k, [a, b]]) => [
+                k,
+                hexRGB(a),
+                hexRGB(b),
+            ]);
+            let paperAmount = 0;
+            function setPaper(p) {
+                paperAmount = clampN(p, 0, 1);
+                const root = document.documentElement;
+                PARSED.forEach(([key, a, b]) => {
+                    const c = a.map((av, i) =>
+                        Math.round(av + (b[i] - av) * paperAmount),
+                    );
+                    root.style.setProperty(key, `rgb(${c[0]},${c[1]},${c[2]})`);
+                });
+                root.dataset.theme = paperAmount > 0.5 ? "paper" : "dark";
+                if (fieldHandle) fieldHandle.setPaper(paperAmount);
+            }
+            setPaper(0);
+
+            /* ================================================================
+   LENIS + GSAP CHOREOGRAPHY
+================================================================ */
+            let tickerFn = null;
+            function initScroll() {
+                if (RM.matches || !window.Lenis || !window.gsap || lenis)
+                    return;
+                gsap.registerPlugin(ScrollTrigger);
+                lenis = new Lenis({
+                    duration: 1.05,
+                    easing: (t) => Math.min(1, 1.001 - 2 ** (-10 * t)),
+                    smoothWheel: true,
+                    wheelMultiplier: 0.95,
+                    touchMultiplier: 1.6,
+                    autoRaf: false,
+                });
+                lenis.on("scroll", ScrollTrigger.update);
+                tickerFn = (time) => lenis.raf(time * 1000);
+                gsap.ticker.add(tickerFn);
+                gsap.ticker.lagSmoothing(0);
+            }
+            function destroyScroll() {
+                if (!lenis) return;
+                if (tickerFn) gsap.ticker.remove(tickerFn);
+                lenis.destroy();
+                lenis = null;
+                tickerFn = null;
+            }
+            initScroll();
+
+            if (window.gsap && window.ScrollTrigger) {
+                gsap.registerPlugin(ScrollTrigger);
+
+                if (!RM.matches) {
+                    const tl = gsap.timeline({
+                        defaults: { ease: "power3.out" },
+                    });
+                    tl.from(
+                        '[data-hero="0"]',
+                        { opacity: 0, y: 18, duration: 0.7 },
+                        0.1,
+                    )
+                        .from(
+                            "[data-hero-line]",
+                            {
+                                yPercent: 110,
+                                duration: 0.9,
+                                stagger: 0.12,
+                                ease: "power4.out",
+                            },
+                            0.15,
+                        )
+                        .from(
+                            '[data-hero="1"]',
+                            { opacity: 0, y: 18, duration: 0.7 },
+                            0.5,
+                        )
+                        .from(
+                            '[data-hero="2"]',
+                            { opacity: 0, y: 18, duration: 0.7 },
+                            0.62,
+                        )
+                        .from(
+                            '[data-hero="3"]',
+                            { opacity: 0, x: 24, duration: 0.8 },
+                            0.55,
+                        )
+                        .from(
+                            '[data-hero="4"] > div',
+                            { opacity: 0, y: 20, duration: 0.6, stagger: 0.08 },
+                            0.8,
+                        );
+
+                    gsap.fromTo(
+                        "#kinetic-1",
+                        { xPercent: 2 },
+                        {
+                            xPercent: -18,
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: "#kinetic",
+                                start: "top bottom",
+                                end: "bottom top",
+                                scrub: 0.6,
+                            },
+                        },
+                    );
+                    gsap.fromTo(
+                        "#kinetic-2",
+                        { xPercent: -18 },
+                        {
+                            xPercent: 2,
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: "#kinetic",
+                                start: "top bottom",
+                                end: "bottom top",
+                                scrub: 0.6,
+                            },
+                        },
+                    );
+
+                    $$("[data-reveal]").forEach((el) => {
+                        gsap.from(el, {
+                            opacity: 0,
+                            y: 26,
+                            duration: 0.65,
+                            ease: "power3.out",
+                            scrollTrigger: {
+                                trigger: el,
+                                start: "top 88%",
+                                once: true,
+                            },
+                        });
+                    });
+                }
+
+                ScrollTrigger.create({
+                    trigger: "#research",
+                    start: "top 85%",
+                    end: "bottom 15%",
+                    onUpdate(self) {
+                        const p = self.progress;
+                        setPaper(
+                            smooth01(p / 0.14) *
+                                (1 - smooth01((p - 0.86) / 0.14)),
+                        );
+                    },
+                    onLeaveBack() {
+                        setPaper(0);
+                    },
+                });
+                if (document.fonts?.ready)
+                    document.fonts.ready.then(() => ScrollTrigger.refresh());
+                window.addEventListener("load", () => ScrollTrigger.refresh());
+            } else {
+                const researchIO = new IntersectionObserver(
+                    (entries) => {
+                        entries.forEach((en) =>
+                            setPaper(en.isIntersecting ? 1 : 0),
+                        );
+                    },
+                    { threshold: 0.2 },
+                );
+                researchIO.observe($("#research"));
+            }
+            RM.addEventListener?.("change", () => {
+                if (RM.matches) destroyScroll();
+                else initScroll();
+            });
+
+            /* ================================================================
+   CLOCK / YEAR / GRAIN TEXTURE
+================================================================ */
+            $("#year").textContent = String(new Date().getFullYear());
+            const clockFmt = new Intl.DateTimeFormat("en-GB", {
+                timeZone: "Asia/Kathmandu",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+            });
+            const tickClock = () => {
+                $("#clock").textContent = clockFmt.format(new Date());
+            };
+            tickClock();
+            setInterval(tickClock, 1000);
+
+            const GRAIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="200" height="200" filter="url(#g)" opacity="0.62"/></svg>`;
+            grainEl.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(GRAIN_SVG)}")`;
+
+            /* ================================================================
+   WEBGL — RAYMARCHED + BAYER-DITHERED FIELD
+================================================================ */
+            const stats = {
+                supported: true,
+                running: false,
+                fps: 0,
+                ms: 0,
+                w: 0,
+                h: 0,
+                scale: 1,
+                steps: 62,
+                dpr: 1,
+            };
+            setInterval(() => {
+                const live = stats.supported && stats.running;
+                $("#mini-fps").textContent = live ? String(stats.fps) : "—";
+                $("#mini-buffer").textContent = stats.w
+                    ? `${stats.w}×${stats.h}`
+                    : "—";
+                $("#tm-state").textContent = !stats.supported
+                    ? "Fallback"
+                    : stats.running
+                      ? "Live"
+                      : "Paused";
+                $("#tm-fps").textContent = live ? String(stats.fps) : "—";
+                $("#tm-ms").textContent = live
+                    ? `${stats.ms.toFixed(2)} ms`
+                    : "—";
+                $("#tm-buffer").textContent = stats.w
+                    ? `${stats.w}×${stats.h}`
+                    : "—";
+                $("#tm-scale").textContent =
+                    `${stats.dpr.toFixed(2)} / ${stats.scale.toFixed(2)}`;
+                $("#tm-steps").textContent = String(stats.steps);
+                $("#tm-kernel").textContent =
+                    `${kernelName()} · ${settings.levels} bands`;
+                $("#tm-paper").textContent =
+                    `${Math.round(paperAmount * 100)}%`;
+                $("#tm-ctx").textContent = stats.supported
+                    ? "WebGL"
+                    : "CSS halftone";
+            }, 250);
+
+            const VERT = `
+varying vec2 vUv;
+void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+            const FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform vec2 uResolution; uniform float uTime; uniform vec2 uPointer;
+uniform float uIntensity; uniform float uGrain; uniform float uAmber; uniform float uLevels;
+uniform float uDitherMode; uniform float uDitherScale; uniform float uSteps; uniform float uPaper;
+uniform vec3 uCanvasDark; uniform vec3 uInkDark; uniform vec3 uCanvasLight; uniform vec3 uInkLight; uniform vec3 uAccent;
+const int MAX_STEPS = 96; const float MAX_DIST = 16.0;
+mat2 rotate2d(float a){ float s=sin(a), c=cos(a); return mat2(c,-s,s,c); }
+float hash21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+float sdRoundBox(vec3 p, vec3 b, float r){ vec3 q=abs(p)-b; return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0)-r; }
+float smoothUnion(float a, float b, float k){ float h=clamp(0.5+0.5*(b-a)/k,0.0,1.0); return mix(b,a,h)-k*h*(1.0-h); }
+float mapField(vec3 p){
+  vec3 q=p;
+  q.xz = rotate2d(0.22*sin(uTime*0.06)+uPointer.x*0.30)*q.xz;
+  q.xy = rotate2d(0.14*cos(uTime*0.045)-uPointer.y*0.20)*q.xy;
+  float t=uTime*0.11;
+  float slabA = sdRoundBox(q-vec3(0.55*sin(t),0.30*cos(t*0.8)+0.10,0.0), vec3(1.45,0.20,0.95), 0.30);
+  float slabB = sdRoundBox(q-vec3(-0.95,-0.45+0.22*sin(t*1.25),0.55), vec3(0.48,0.52,1.25), 0.34);
+  float floorWave = q.y+1.20+0.20*sin(q.x*1.05+t)*cos(q.z*0.85-t*0.7);
+  return smoothUnion(smoothUnion(slabA,slabB,0.80), floorWave, 0.95);
+}
+vec3 fieldNormal(vec3 p){
+  vec2 k=vec2(1.0,-1.0); float e=0.0028;
+  return normalize(k.xyy*mapField(p+k.xyy*e)+k.yyx*mapField(p+k.yyx*e)+k.yxy*mapField(p+k.yxy*e)+k.xxx*mapField(p+k.xxx*e));
+}
+float ambientOcclusion(vec3 p, vec3 n){
+  float occ=0.0, sca=1.0;
+  for(int i=0;i<5;i++){ float h=0.02+0.14*float(i); occ+=(h-mapField(p+n*h))*sca; sca*=0.72; }
+  return clamp(1.0-1.6*occ,0.0,1.0);
+}
+float backgroundLuma(vec2 uv){
+  return 0.028 + 0.055*smoothstep(-1.10,1.00,uv.y) + 0.030*exp(-pow((uv.y+0.18)*3.2,2.0));
+}
+float marchLuma(vec2 uv, float stepBudget){
+  vec3 ro=vec3(0.10*sin(uTime*0.05), 0.34+0.08*cos(uTime*0.043), -4.60);
+  vec3 rd=normalize(vec3(uv.x,uv.y,1.62));
+  float travel=0.0, hit=0.0;
+  for(int i=0;i<MAX_STEPS;i++){
+    if(float(i)>=stepBudget) break;
+    float sceneDistance=mapField(ro+rd*travel);
+    if(sceneDistance<0.0022*travel){ hit=1.0; break; }
+    travel+=sceneDistance*0.85;
+    if(travel>MAX_DIST) break;
+  }
+  float bg=backgroundLuma(uv);
+  if(hit<0.5) return bg;
+  vec3 sp=ro+rd*travel; vec3 sn=fieldNormal(sp); vec3 key=normalize(vec3(-0.58,0.72,-0.38));
+  float diffuse=clamp(dot(sn,key),0.0,1.0);
+  float rim=pow(clamp(1.0+dot(sn,rd),0.0,1.0),2.6);
+  float spec=pow(clamp(dot(reflect(rd,sn),key),0.0,1.0),26.0);
+  float ao=ambientOcclusion(sp,sn);
+  float shaded=0.055+0.70*diffuse*ao+0.20*rim*ao+0.34*spec;
+  return clamp(mix(bg,shaded,exp(-0.017*travel*travel)),0.0,1.0);
+}
+float bayer2(vec2 a){ a=floor(a); return fract(dot(a,vec2(0.5,a.y*0.75))); }
+float bayer4(vec2 a){ return bayer2(0.5*a)*0.25+bayer2(a); }
+float bayer8(vec2 a){ return bayer4(0.5*a)*0.25+bayer2(a); }
+float quantise(float v, float th, float lv){ float bands=max(lv-1.0,1.0); return clamp(floor(v*bands+th)/bands,0.0,1.0); }
+float diffusionLuma(vec2 pixel, vec2 uv, float base){
+  vec2 texel=2.0/uResolution;
+  float dir = mod(floor(pixel.y),2.0)<0.5 ? 1.0 : -1.0;
+  float ns = max(floor(uSteps*0.42),14.0);
+  float n1=marchLuma(uv+vec2(-dir,0.0)*texel,ns);
+  float n2=marchLuma(uv+vec2(0.0,-1.0)*texel,ns);
+  float n3=marchLuma(uv+vec2(dir,-1.0)*texel,ns);
+  float n4=marchLuma(uv+vec2(-dir,-1.0)*texel,ns);
+  float err=(n1-quantise(n1,0.5,uLevels))*0.4375+(n2-quantise(n2,0.5,uLevels))*0.3125
+           +(n3-quantise(n3,0.5,uLevels))*0.1875+(n4-quantise(n4,0.5,uLevels))*0.0625;
+  return clamp(base+err*0.90,0.0,1.0);
+}
+void main(){
+  vec2 pixel=gl_FragCoord.xy;
+  vec2 uv=(2.0*pixel-uResolution)/uResolution.y;
+  float aspect=uResolution.x/max(uResolution.y,1.0);
+  float luma=marchLuma(uv,uSteps);
+  luma=clamp(luma*uIntensity*mix(0.72,1.18,smoothstep(-aspect,aspect,uv.x)),0.0,1.0);
+  luma=clamp(luma+(hash21(pixel+fract(uTime)*vec2(91.7,57.3))-0.5)*uGrain,0.0,1.0);
+  float threshold=bayer8(pixel/max(uDitherScale,1.0));
+  float shaped=luma, activeTh=threshold;
+  if(uDitherMode>1.5){ shaped=diffusionLuma(pixel,uv,luma); activeTh=0.5; }
+  else if(uDitherMode<0.5){ activeTh=0.5; }
+  float tone = uDitherMode<0.5 ? shaped : quantise(shaped,activeTh,uLevels);
+  float seam=exp(-pow((uv.y-0.12*sin(uTime*0.07))*5.0,2.0));
+  float accentTone=quantise(smoothstep(0.52,0.96,luma)*(0.30+0.70*seam)*uAmber, fract(threshold+0.37), 3.0);
+  vec3 canvasColour=mix(uCanvasDark,uCanvasLight,uPaper);
+  vec3 inkColour=mix(uInkDark,uInkLight,uPaper);
+  vec3 colour=mix(canvasColour,inkColour,tone);
+  colour=mix(colour, mix(uAccent,inkColour,0.12*uPaper), clamp(accentTone,0.0,1.0)*0.90);
+  float vig=1.0-0.28*pow(clamp(length(uv*vec2(0.42,0.62)),0.0,1.0),2.2);
+  colour*=mix(vig,1.0,uPaper*0.60);
+  gl_FragColor=vec4(colour,1.0);
+}
+`;
+
+            async function initField() {
+                let THREE;
+                try {
+                    THREE =
+                        await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+                } catch {
+                    fieldFallback();
+                    return;
+                }
+
+                const host = $("#field-host");
+                let renderer;
+                try {
+                    renderer = new THREE.WebGLRenderer({
+                        antialias: false,
+                        alpha: false,
+                        depth: false,
+                        stencil: false,
+                        powerPreference: "high-performance",
+                        preserveDrawingBuffer: true,
+                    });
+                } catch {
+                    fieldFallback();
+                    return;
+                }
+
+                $("#field-fallback")?.remove();
+                renderer.setPixelRatio(1);
+                renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+                renderer.setClearColor(0x0c0d0f, 1);
+                const canvas = renderer.domElement;
+                canvas.setAttribute("aria-hidden", "true");
+                host.appendChild(canvas);
+
+                const srgb = (h) =>
+                    new THREE.Vector3(...hexRGB(h).map((v) => v / 255));
+                const uniforms = {
+                    uResolution: { value: new THREE.Vector2(1, 1) },
+                    uTime: { value: 6.2 },
+                    uPointer: { value: new THREE.Vector2(0, 0) },
+                    uIntensity: { value: 1 },
+                    uGrain: { value: 0.06 },
+                    uAmber: { value: 0.16 },
+                    uLevels: { value: 5 },
+                    uDitherMode: { value: 1 },
+                    uDitherScale: { value: 1 },
+                    uSteps: { value: 62 },
+                    uPaper: { value: 0 },
+                    uCanvasDark: { value: srgb("#0C0D0F") },
+                    uInkDark: { value: srgb("#EDEDEF") },
+                    uCanvasLight: { value: srgb("#F4F3EF") },
+                    uInkLight: { value: srgb("#14161A") },
+                    uAccent: { value: srgb("#D97706") },
+                };
+                const geometry = new THREE.PlaneGeometry(2, 2);
+                const material = new THREE.ShaderMaterial({
+                    uniforms,
+                    vertexShader: VERT,
+                    fragmentShader: FRAG,
+                    depthTest: false,
+                    depthWrite: false,
+                });
+                const quad = new THREE.Mesh(geometry, material);
+                quad.frustumCulled = false;
+                const scene = new THREE.Scene();
+                scene.add(quad);
+                const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+                let rafId = 0,
+                    running = false,
+                    contextLost = false;
+                let pageVisible = document.visibilityState !== "hidden",
+                    inView = true;
+                let lastTs = 0,
+                    elapsed = 6.2,
+                    statAcc = 0,
+                    msAcc = 0,
+                    frames = 0;
+                let reduced = RM.matches,
+                    paperTarget = paperAmount;
+                const pTarget = new THREE.Vector2(0, 0),
+                    pCurrent = new THREE.Vector2(0, 0);
+
+                const applyUniforms = () => {
+                    uniforms.uIntensity.value = settings.intensity;
+                    uniforms.uGrain.value = settings.grain;
+                    uniforms.uAmber.value = settings.amber;
+                    uniforms.uLevels.value = settings.levels;
+                    uniforms.uDitherMode.value = DITHER_INDEX[settings.dither];
+                    uniforms.uSteps.value = QUALITY[settings.quality].steps;
+                    stats.steps = QUALITY[settings.quality].steps;
+                    if (!settings.parallax) pTarget.set(0, 0);
+                };
+                const resize = () => {
+                    const rect = host.getBoundingClientRect();
+                    const cssW = Math.max(1, rect.width),
+                        cssH = Math.max(1, rect.height);
+                    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                    const budget =
+                        QUALITY[settings.quality].pixels *
+                        (settings.dither === "diffusion" ? 0.5 : 1);
+                    const scale = Math.min(
+                        dpr,
+                        Math.sqrt(budget / (cssW * cssH)),
+                    );
+                    const w = Math.max(2, Math.round(cssW * scale)),
+                        h = Math.max(2, Math.round(cssH * scale));
+                    renderer.setSize(w, h, false);
+                    canvas.style.width = "100%";
+                    canvas.style.height = "100%";
+                    uniforms.uResolution.value.set(w, h);
+                    uniforms.uDitherScale.value = Math.max(
+                        1,
+                        Math.round(2 * scale),
+                    );
+                    Object.assign(stats, {
+                        w,
+                        h,
+                        scale: roundTo(scale, 2),
+                        dpr: roundTo(dpr, 2),
+                    });
+                };
+                const renderOnce = () => {
+                    if (contextLost) return;
+                    uniforms.uPaper.value = paperTarget;
+                    renderer.render(scene, camera);
+                };
+                const shouldRun = () =>
+                    !contextLost &&
+                    pageVisible &&
+                    inView &&
+                    settings.motion &&
+                    !reduced;
+                const frame = (ts) => {
+                    rafId = requestAnimationFrame(frame);
+                    const dt =
+                        lastTs === 0
+                            ? 1 / 60
+                            : Math.min((ts - lastTs) / 1000, 0.05);
+                    lastTs = ts;
+                    elapsed += dt;
+                    pCurrent.lerp(pTarget, 1 - Math.exp(-dt * 4.5));
+                    uniforms.uTime.value = elapsed;
+                    uniforms.uPointer.value.copy(pCurrent);
+                    uniforms.uPaper.value +=
+                        (paperTarget - uniforms.uPaper.value) *
+                        (1 - Math.exp(-dt * 5));
+                    const t0 = performance.now();
+                    renderer.render(scene, camera);
+                    msAcc += performance.now() - t0;
+                    frames++;
+                    statAcc += dt;
+                    if (statAcc >= 0.25) {
+                        stats.fps = Math.round(frames / statAcc);
+                        stats.ms = roundTo(msAcc / Math.max(frames, 1), 2);
+                        statAcc = 0;
+                        msAcc = 0;
+                        frames = 0;
+                    }
+                };
+                const start = () => {
+                    if (running || !shouldRun()) return;
+                    running = true;
+                    stats.running = true;
+                    lastTs = 0;
+                    rafId = requestAnimationFrame(frame);
+                };
+                const stop = () => {
+                    if (!running) return;
+                    running = false;
+                    stats.running = false;
+                    cancelAnimationFrame(rafId);
+                    rafId = 0;
+                };
+                const sync = () => {
+                    if (shouldRun()) start();
+                    else {
+                        stop();
+                        renderOnce();
+                    }
+                };
+
+                const onPointer = (e) => {
+                    if (!settings.parallax || reduced) return;
+                    pTarget.set(
+                        clampN((e.clientX / innerWidth) * 2 - 1, -1, 1),
+                        clampN(1 - (e.clientY / innerHeight) * 2, -1, 1),
+                    );
+                };
+                const onVis = () => {
+                    pageVisible = document.visibilityState !== "hidden";
+                    sync();
+                };
+                const onRM = (e) => {
+                    reduced = e.matches;
+                    sync();
+                };
+                const onLost = (e) => {
+                    e.preventDefault();
+                    contextLost = true;
+                    stop();
+                };
+                const onRestored = () => {
+                    contextLost = false;
+                    resize();
+                    applyUniforms();
+                    sync();
+                };
+
+                const ro = new ResizeObserver(() => {
+                    resize();
+                    if (!running) renderOnce();
+                });
+                ro.observe(host);
+                const io = new IntersectionObserver(
+                    (en) => {
+                        inView = en[0]?.isIntersecting ?? true;
+                        sync();
+                    },
+                    { threshold: 0 },
+                );
+                io.observe(host);
+                const unsub = (fn) => storeListeners.delete(fn);
+                const storeFn = () => {
+                    const prevQ = uniforms.uSteps.value,
+                        prevD = uniforms.uDitherMode.value;
+                    applyUniforms();
+                    if (
+                        prevQ !== uniforms.uSteps.value ||
+                        prevD !== uniforms.uDitherMode.value
+                    )
+                        resize();
+                    sync();
+                    if (!running) renderOnce();
+                };
+                storeListeners.add(storeFn);
+
+                window.addEventListener("pointermove", onPointer, {
+                    passive: true,
+                });
+                document.addEventListener("visibilitychange", onVis);
+                window.addEventListener("pagehide", stop);
+                window.addEventListener("pageshow", sync);
+                RM.addEventListener?.("change", onRM);
+                canvas.addEventListener("webglcontextlost", onLost);
+                canvas.addEventListener("webglcontextrestored", onRestored);
+
+                applyUniforms();
+                resize();
+                sync();
+                renderOnce();
+
+                fieldHandle = {
+                    setPaper(v) {
+                        paperTarget = v;
+                        if (!running) renderOnce();
+                    },
+                    exportPNG(name) {
+                        renderOnce();
+                        const a = document.createElement("a");
+                        a.href = canvas.toDataURL("image/png");
+                        a.download = name;
+                        a.click();
+                    },
+                    dispose() {
+                        stop();
+                        unsub(storeFn);
+                        ro.disconnect();
+                        io.disconnect();
+                        window.removeEventListener("pointermove", onPointer);
+                        document.removeEventListener("visibilitychange", onVis);
+                        canvas.removeEventListener("webglcontextlost", onLost);
+                        canvas.removeEventListener(
+                            "webglcontextrestored",
+                            onRestored,
+                        );
+                        scene.remove(quad);
+                        geometry.dispose();
+                        material.dispose();
+                        renderer.dispose();
+                        renderer.forceContextLoss();
+                        canvas.remove();
+                    },
+                };
+                if (paperAmount > 0) fieldHandle.setPaper(paperAmount);
+            }
+            function fieldFallback() {
+                stats.supported = false;
+                $("#btn-export").disabled = true;
+                $("#btn-export").title =
+                    "WebGL unavailable — CSS halftone fallback active";
+                $("#tm-ctx").textContent = "CSS halftone";
+            }
+            initField();
+        </script>
+    </body>
+</html>

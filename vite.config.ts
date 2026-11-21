@@ -15,7 +15,7 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            '@': path.resolve(import.meta.dirname, 'resources/js'),
+            '@': path.resolve(process.cwd(), 'resources/js'),
         },
     },
     build: {
