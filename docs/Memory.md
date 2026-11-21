@@ -37,7 +37,10 @@
   - *Completed (2026-11-21)*: Built `PageTransition.tsx` (Framer Motion `<AnimatePresence mode="wait">` keyed to Inertia URL), `MagneticButton.tsx` (<=8px damped spring on pointer-fine devices), `KineticMarqueeText.tsx` (GSAP ScrollTrigger scrubbed horizontal display text), `ContrastShiftBand.tsx` (full-bleed `#0C0D0F` <-> `#F4F3EF` archival shift with clean unmount/navigation reset), and `HoverRevealRow.tsx` (hover tech-stack marquee + cursor-following masked preview).
   - Built `MetricStrip.tsx` and GSAP ScrollTrigger-scrubbed `FlagshipShowcaseSection.tsx`, refactored `PublicLayout.tsx`, and composed the full 100% dynamic `Public/Home.tsx` wired to Redis/MySQL DTOs.
   - Verified with `npm run types`, `npm run build`, and `php artisan test` (13 passed, 82 assertions).
-- [ ] Phase 5: Case Study Details, Technical Blog, Resume & SEO
+- [x] Phase 5: Case Study Details, Technical Blog, Resume & SEO
+  - *Completed (2026-11-21)*: Built invokable controllers for `/work/{slug}`, `/writing` (tag-filtered), `/writing/{slug}`, `/resume`, and dynamic `/sitemap.xml` (`DOMDocument` XML).
+  - Created `SeoHead.tsx` (dynamic OpenGraph + `Person`/`TechArticle` JSON-LD), dark-themed `MermaidDiagram.tsx` (deterministic SVG renderer + Mermaid source toggle), `.editorial-prose` styles, and `Public/Work/Show.tsx`, `Public/Writing/{Index,Show}.tsx` (sticky TOC), and `Public/Resume.tsx` (STAR timeline, skills matrix, CV PDF download).
+  - Verified with `php artisan test` (16 passed), `npm run types`, and `npm run build`.
 - [ ] Phase 6: Slide-Over Scope Drawer, Horizon Queues & Production Hardening
 
 ## Active Gotchas & Constraints

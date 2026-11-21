@@ -8,11 +8,21 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use App\Http\Controllers\Admin\ProjectController as AdminProjectController;
 use App\Http\Controllers\Admin\ResumeController as AdminResumeController;
+use App\Http\Controllers\Public\ArticleShowController;
 use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\ProjectShowController;
+use App\Http\Controllers\Public\ResumeController as PublicResumeController;
+use App\Http\Controllers\Public\SitemapController;
+use App\Http\Controllers\Public\WritingIndexController;
 use Illuminate\Support\Facades\Route;
 
 // Public Routes
 Route::get('/', HomeController::class)->name('home');
+Route::get('/work/{slug}', ProjectShowController::class)->name('work.show');
+Route::get('/writing', WritingIndexController::class)->name('writing.index');
+Route::get('/writing/{slug}', ArticleShowController::class)->name('writing.show');
+Route::get('/resume', PublicResumeController::class)->name('resume.show');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Private Single-Owner Admin Auth (public registration strictly disabled)
 Route::prefix('admin')->name('admin.')->group(function (): void {
