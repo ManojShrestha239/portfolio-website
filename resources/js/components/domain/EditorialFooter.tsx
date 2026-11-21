@@ -10,6 +10,7 @@ import {
     Sun,
 } from 'lucide-react';
 import { MagneticButton } from '@/motion/MagneticButton';
+import { useSmoothScroll } from '@/motion/SmoothScrollProvider';
 import { Button } from '@/components/ui/button';
 
 const COLOPHON_STACK: readonly string[] = [
@@ -64,6 +65,7 @@ function WeatherGlyph({ icon }: { readonly icon: WeatherIconKey }) {
 }
 
 export function EditorialFooter() {
+    const { scrollTo } = useSmoothScroll();
     const [clock, setClock] = useState<string>('—:—:—');
     const [weather, setWeather] = useState<LocalWeatherState | null>(null);
 
@@ -96,8 +98,7 @@ export function EditorialFooter() {
     }, []);
 
     const scrollToTop = (): void => {
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+        scrollTo(0);
     };
 
     return (

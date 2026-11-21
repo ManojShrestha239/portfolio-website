@@ -1,8 +1,8 @@
-import { useEffect, useState, type PropsWithChildren } from 'react';
+import { useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { ArrowUpRight } from 'lucide-react';
 import { DitheredFieldCanvas } from '@/webgl/DitheredFieldCanvas';
-import { SmoothScrollProvider } from '@/motion/SmoothScrollProvider';
+import { SmoothScrollProvider, useSmoothScroll } from '@/motion/SmoothScrollProvider';
 import { PageTransition } from '@/motion/PageTransition';
 import { MagneticButton } from '@/motion/MagneticButton';
 import { ScopeDrawerProvider, useScopeDrawer } from '@/context/ScopeDrawerContext';
@@ -48,9 +48,10 @@ function resolveRouteNavKey(url: string): NavKey {
     return 'overview';
 }
 
-function PublicLayoutShell({ children }: PropsWithChildren) {
+function PublicLayoutInner({ children }: PropsWithChildren) {
     const page = usePage<SharedPageProps>();
     const { openDrawer } = useScopeDrawer();
+    const { subscribeProgress, scrollTo } = useSmoothScroll();
     const { app } = page.props;
 
     const pathname = page.url.split('?')[0] ?? '/';
@@ -59,7 +60,10 @@ function PublicLayoutShell({ children }: PropsWithChildren) {
     const [activeSection, setActiveSection] = useState<NavKey>(() =>
         resolveRouteNavKey(page.url),
     );
-    const [scrollPercent, setScrollPercent] = useState<number>(0);
+
+    const progressBarRef = useRef<HTMLDivElement | null>(null);
+    const progressTrackRef = useRef<HTMLDivElement | null>(null);
+    const percentLabelRef = useRef<HTMLSpanElement | null>(null);
 
     useEffect(() => {
         setActiveSection(resolveRouteNavKey(page.url));
@@ -70,13 +74,8 @@ function PublicLayoutShell({ children }: PropsWithChildren) {
             delete document.documentElement.dataset.band;
         });
 
-        const removeNavigate = router.on('navigate', () => {
-            setScrollPercent(0);
-        });
-
         return () => {
             removeStart();
-            removeNavigate();
             delete document.documentElement.dataset.band;
         };
     }, []);
@@ -117,171 +116,156 @@ function PublicLayoutShell({ children }: PropsWithChildren) {
         return () => observer.disconnect();
     }, [isHome, page.url]);
 
-    // Real-time scroll progress percentage (0..100)
+    // Zero-React-rerender 144Hz scroll progress updates via direct DOM refs
     useEffect(() => {
-        let rafId = 0;
+        let lastRounded = -1;
 
-        const computeScroll = (): void => {
-            rafId = 0;
-            const doc = document.documentElement;
-            const scrollable = Math.max(doc.scrollHeight - window.innerHeight, 0);
-            if (scrollable <= 0) {
-                setScrollPercent(0);
-                return;
+        const unsubscribe = subscribeProgress((progress) => {
+            if (progressBarRef.current) {
+                progressBarRef.current.style.transform = `scale3d(${progress}, 1, 1)`;
             }
-            const next = Math.min(Math.max((window.scrollY / scrollable) * 100, 0), 100);
-            setScrollPercent(next);
-        };
-
-        const onScrollOrResize = (): void => {
-            if (rafId === 0) {
-                rafId = window.requestAnimationFrame(computeScroll);
+            const rounded = Math.round(progress * 100);
+            if (rounded !== lastRounded) {
+                lastRounded = rounded;
+                if (percentLabelRef.current) {
+                    percentLabelRef.current.textContent = `${String(rounded).padStart(2, '0')}%`;
+                }
+                if (progressTrackRef.current) {
+                    progressTrackRef.current.setAttribute('aria-valuenow', String(rounded));
+                }
             }
-        };
+        });
 
-        computeScroll();
-        window.addEventListener('scroll', onScrollOrResize, { passive: true });
-        window.addEventListener('resize', onScrollOrResize, { passive: true });
-
-        return () => {
-            if (rafId !== 0) {
-                window.cancelAnimationFrame(rafId);
-            }
-            window.removeEventListener('scroll', onScrollOrResize);
-            window.removeEventListener('resize', onScrollOrResize);
-        };
-    }, [page.url]);
-
-    const roundedPercent = Math.round(scrollPercent);
+        return unsubscribe;
+    }, [subscribeProgress]);
 
     return (
-        <div className="relative min-h-screen bg-canvas text-ink">
-            {/* Persistent WebGL Raymarched + 8x8 Bayer Dithered + Film Grain Canvas */}
-            <DitheredFieldCanvas />
+        <div className="relative z-10 flex min-h-screen flex-col">
+            <header className="sticky top-0 z-40 border-b border-hairline bg-canvas/94 transition-colors duration-500">
+                <div className="mx-auto flex h-[4.25rem] max-w-[1680px] items-center justify-between px-5 lg:px-8">
+                    <Link
+                        href="/"
+                        className="group flex items-center gap-3 focus-visible:outline-accent"
+                    >
+                        <span className="flex h-8 w-8 items-center justify-center border border-accent font-mono text-[11px] text-accent transition-colors group-hover:bg-accent group-hover:text-canvas">
+                            MS
+                        </span>
+                        <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-secondary transition-colors group-hover:text-ink">
+                            {app.owner}
+                        </span>
+                    </Link>
 
-            {/* Subtle 96px architectural hairline grid */}
-            <div
-                aria-hidden="true"
-                className="architectural-grid-layer pointer-events-none fixed inset-0 z-[1] opacity-55"
-            />
+                    <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
+                        {NAV_ENTRIES.map((item) => {
+                            const isActive = activeSection === item.key;
+                            const navClasses = cn(
+                                'group relative py-2 font-mono text-[11px] uppercase tracking-[0.24em] transition-colors duration-200',
+                                isActive ? 'text-ink' : 'text-ink-muted hover:text-ink',
+                            );
 
-            <SmoothScrollProvider>
-                <div className="relative z-10 flex min-h-screen flex-col">
-                    <header className="sticky top-0 z-40 border-b border-hairline bg-canvas/94 transition-colors duration-500">
-                        <div className="mx-auto flex h-[4.25rem] max-w-[1680px] items-center justify-between px-5 lg:px-8">
-                            <Link
-                                href="/"
-                                className="group flex items-center gap-3 focus-visible:outline-accent"
-                            >
-                                <span className="flex h-8 w-8 items-center justify-center border border-accent font-mono text-[11px] text-accent transition-colors group-hover:bg-accent group-hover:text-canvas">
-                                    MS
-                                </span>
-                                <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-secondary transition-colors group-hover:text-ink">
-                                    {app.owner}
-                                </span>
-                            </Link>
-
-                            <nav aria-label="Primary" className="hidden items-center gap-7 md:flex">
-                                {NAV_ENTRIES.map((item) => {
-                                    const isActive = activeSection === item.key;
-                                    const navClasses = cn(
-                                        'group relative py-2 font-mono text-[11px] uppercase tracking-[0.24em] transition-colors duration-200',
-                                        isActive
-                                            ? 'text-ink'
-                                            : 'text-ink-muted hover:text-ink',
-                                    );
-
-                                    const underline = (
-                                        <span
-                                            aria-hidden="true"
-                                            className={cn(
-                                                'pointer-events-none absolute inset-x-0 bottom-0 h-[1.5px] origin-left bg-accent transition-transform duration-300 ease-out',
-                                                isActive
-                                                    ? 'scale-x-100'
-                                                    : 'scale-x-0 group-hover:scale-x-100',
-                                            )}
-                                        />
-                                    );
-
-                                    if (item.isAnchor) {
-                                        return (
-                                            <a
-                                                key={item.key}
-                                                href={item.href}
-                                                aria-current={isActive ? 'page' : undefined}
-                                                className={navClasses}
-                                            >
-                                                <span>{item.label}</span>
-                                                {underline}
-                                            </a>
-                                        );
-                                    }
-
-                                    return (
-                                        <Link
-                                            key={item.key}
-                                            href={item.href}
-                                            aria-current={isActive ? 'page' : undefined}
-                                            className={navClasses}
-                                        >
-                                            <span>{item.label}</span>
-                                            {underline}
-                                        </Link>
-                                    );
-                                })}
-                            </nav>
-
-                            <div className="flex items-center gap-4">
+                            const underline = (
                                 <span
-                                    aria-label={`Scroll progress ${roundedPercent}%`}
-                                    className="hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-ink-muted sm:inline-flex"
-                                >
-                                    <span className="text-accent">
-                                        {String(roundedPercent).padStart(2, '0')}%
-                                    </span>
-                                </span>
+                                    aria-hidden="true"
+                                    className={cn(
+                                        'pointer-events-none absolute inset-x-0 bottom-0 h-[1.5px] origin-left bg-accent transition-transform duration-300 ease-out',
+                                        isActive
+                                            ? 'scale-x-100'
+                                            : 'scale-x-0 group-hover:scale-x-100',
+                                    )}
+                                />
+                            );
 
-                                <MagneticButton>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openDrawer()}
+                            if (item.isAnchor && isHome) {
+                                const hash = item.href.replace('/', '');
+                                return (
+                                    <a
+                                        key={item.key}
+                                        href={item.href}
+                                        aria-current={isActive ? 'page' : undefined}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            scrollTo(hash);
+                                        }}
+                                        className={navClasses}
                                     >
-                                        <span>Scope Project</span>
-                                        <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                                    </Button>
-                                </MagneticButton>
-                            </div>
-                        </div>
+                                        <span>{item.label}</span>
+                                        {underline}
+                                    </a>
+                                );
+                            }
 
-                        {/* Scrolling progress bar directly below nav */}
-                        <div
-                            role="progressbar"
-                            aria-label="Page scroll progress"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={roundedPercent}
-                            className="relative h-[2px] w-full overflow-hidden bg-hairline/70"
-                        >
-                            <div
-                                style={{
-                                    transform: `scaleX(${scrollPercent / 100})`,
-                                }}
-                                className="h-full w-full origin-left bg-accent will-change-transform"
-                            />
-                        </div>
-                    </header>
+                            if (item.isAnchor) {
+                                return (
+                                    <a
+                                        key={item.key}
+                                        href={item.href}
+                                        aria-current={isActive ? 'page' : undefined}
+                                        className={navClasses}
+                                    >
+                                        <span>{item.label}</span>
+                                        {underline}
+                                    </a>
+                                );
+                            }
 
-                    <main className="flex-1">
-                        <PageTransition>{children}</PageTransition>
-                    </main>
+                            return (
+                                <Link
+                                    key={item.key}
+                                    href={item.href}
+                                    aria-current={isActive ? 'page' : undefined}
+                                    className={navClasses}
+                                >
+                                    <span>{item.label}</span>
+                                    {underline}
+                                </Link>
+                            );
+                        })}
+                    </nav>
 
-                    <EditorialFooter />
+                    <div className="flex items-center gap-4">
+                        <span className="hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] tabular-nums text-ink-muted sm:inline-flex">
+                            <span ref={percentLabelRef} className="text-accent">
+                                00%
+                            </span>
+                        </span>
+
+                        <MagneticButton>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDrawer()}
+                            >
+                                <span>Scope Project</span>
+                                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                            </Button>
+                        </MagneticButton>
+                    </div>
                 </div>
-            </SmoothScrollProvider>
 
-            <ScopeDrawer />
+                {/* 144Hz GPU-composited scroll progress bar directly below nav */}
+                <div
+                    ref={progressTrackRef}
+                    role="progressbar"
+                    aria-label="Page scroll progress"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={0}
+                    className="relative h-[2px] w-full overflow-hidden bg-hairline/70"
+                >
+                    <div
+                        ref={progressBarRef}
+                        style={{ transform: 'scale3d(0, 1, 1)' }}
+                        className="h-full w-full origin-left bg-accent will-change-transform"
+                    />
+                </div>
+            </header>
+
+            <main className="flex-1">
+                <PageTransition>{children}</PageTransition>
+            </main>
+
+            <EditorialFooter />
         </div>
     );
 }
@@ -290,7 +274,22 @@ export function PublicLayout({ children }: PropsWithChildren) {
     return (
         <FieldConsoleProvider>
             <ScopeDrawerProvider>
-                <PublicLayoutShell>{children}</PublicLayoutShell>
+                <div className="relative min-h-screen bg-canvas text-ink">
+                    {/* Persistent WebGL Raymarched + 8x8 Bayer Dithered + Film Grain Canvas */}
+                    <DitheredFieldCanvas />
+
+                    {/* Subtle 96px architectural hairline grid promoted to its own compositor layer */}
+                    <div
+                        aria-hidden="true"
+                        className="architectural-grid-layer pointer-events-none fixed inset-0 z-[1] opacity-55 [transform:translateZ(0)]"
+                    />
+
+                    <SmoothScrollProvider>
+                        <PublicLayoutInner>{children}</PublicLayoutInner>
+                    </SmoothScrollProvider>
+
+                    <ScopeDrawer />
+                </div>
             </ScopeDrawerProvider>
         </FieldConsoleProvider>
     );

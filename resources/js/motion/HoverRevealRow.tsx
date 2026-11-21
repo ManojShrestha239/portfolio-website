@@ -10,9 +10,12 @@ interface HoverRevealRowProps {
 
 export function HoverRevealRow({ project, index }: HoverRevealRowProps) {
     const rowRef = useRef<HTMLDivElement | null>(null);
+    const previewRef = useRef<HTMLDivElement | null>(null);
     const [hovered, setHovered] = useState<boolean>(false);
     const [canHoverFine, setCanHoverFine] = useState<boolean>(false);
-    const [pointerPos, setPointerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    const targetPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+    const currentPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
     useEffect(() => {
         const media = window.matchMedia('(hover: hover) and (pointer: fine)');
@@ -22,15 +25,51 @@ export function HoverRevealRow({ project, index }: HoverRevealRowProps) {
         return () => media.removeEventListener('change', update);
     }, []);
 
+    useEffect(() => {
+        if (!hovered || !canHoverFine) {
+            return;
+        }
+
+        let rafId = 0;
+        const animate = (): void => {
+            const cur = currentPosRef.current;
+            const tgt = targetPosRef.current;
+            cur.x += (tgt.x - cur.x) * 0.18;
+            cur.y += (tgt.y - cur.y) * 0.18;
+
+            if (previewRef.current) {
+                previewRef.current.style.transform = `translate3d(${cur.x}px, ${cur.y}px, 0)`;
+            }
+            rafId = window.requestAnimationFrame(animate);
+        };
+
+        rafId = window.requestAnimationFrame(animate);
+        return () => window.cancelAnimationFrame(rafId);
+    }, [hovered, canHoverFine]);
+
     const handleMouseMove = (event: MouseEvent<HTMLDivElement>): void => {
         if (!canHoverFine || !rowRef.current) {
             return;
         }
         const rect = rowRef.current.getBoundingClientRect();
-        setPointerPos({
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top,
-        });
+        targetPosRef.current = {
+            x: Math.min(Math.max(event.clientX - rect.left + 24, 16), 760),
+            y: event.clientY - rect.top - 90,
+        };
+    };
+
+    const handleMouseEnter = (event: MouseEvent<HTMLDivElement>): void => {
+        if (!canHoverFine || !rowRef.current) {
+            return;
+        }
+        const rect = rowRef.current.getBoundingClientRect();
+        const initial = {
+            x: Math.min(Math.max(event.clientX - rect.left + 24, 16), 760),
+            y: event.clientY - rect.top - 90,
+        };
+        targetPosRef.current = initial;
+        currentPosRef.current = { ...initial };
+        setHovered(true);
     };
 
     const marqueeText = project.techStack.join('  ·  ');
@@ -38,7 +77,7 @@ export function HoverRevealRow({ project, index }: HoverRevealRowProps) {
     return (
         <div
             ref={rowRef}
-            onMouseEnter={() => canHoverFine && setHovered(true)}
+            onMouseEnter={handleMouseEnter}
             onMouseLeave={() => setHovered(false)}
             onMouseMove={handleMouseMove}
             className="group relative border-b border-hairline bg-canvas/80 transition-colors hover:bg-surface"
@@ -89,11 +128,9 @@ export function HoverRevealRow({ project, index }: HoverRevealRowProps) {
 
             {canHoverFine && hovered && (
                 <div
+                    ref={previewRef}
                     aria-hidden="true"
-                    style={{
-                        transform: `translate3d(${Math.min(Math.max(pointerPos.x + 24, 16), 760)}px, ${pointerPos.y - 90}px, 0)`,
-                    }}
-                    className="pointer-events-none absolute left-0 top-0 z-30 hidden w-72 overflow-hidden rounded-xs border border-hairline bg-surface shadow-2xl lg:block"
+                    className="pointer-events-none absolute left-0 top-0 z-30 hidden w-72 overflow-hidden rounded-xs border border-hairline bg-surface shadow-2xl will-change-transform lg:block"
                 >
                     {project.previewImagePath ? (
                         <img
