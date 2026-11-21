@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Middleware\EnsurePortfolioOwner;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
 use App\Support\ApiResponse;
 use App\Support\HttpStatusCatalog;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            SecurityHeaders::class,
+        ]);
+
+        $middleware->api(append: [
+            SecurityHeaders::class,
         ]);
 
         $middleware->alias([

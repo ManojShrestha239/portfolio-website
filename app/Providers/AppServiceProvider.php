@@ -28,8 +28,18 @@ final class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($email.'|'.$request->ip());
         });
 
+        RateLimiter::for('admin-write', static function (Request $request): Limit {
+            $key = (string) ($request->user()?->id ?? $request->ip());
+
+            return Limit::perMinute(60)->by('admin-write:'.$key);
+        });
+
         RateLimiter::for('inquiry-submit', static function (Request $request): Limit {
-            return Limit::perMinute(5)->by((string) $request->ip());
+            return Limit::perMinute(5)->by('inquiry:'.$request->ip());
+        });
+
+        RateLimiter::for('api-public', static function (Request $request): Limit {
+            return Limit::perMinute(60)->by('api:'.$request->ip());
         });
     }
 }

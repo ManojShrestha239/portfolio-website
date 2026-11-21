@@ -34,7 +34,9 @@ Route::post('/inquiries', StoreInquiryController::class)
     ->middleware('throttle:inquiry-submit')
     ->name('inquiries.store');
 
-Route::get('/telemetry/weather', LocalWeatherController::class)->name('telemetry.weather');
+Route::get('/telemetry/weather', LocalWeatherController::class)
+    ->middleware('throttle:api-public')
+    ->name('telemetry.weather');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Private Single-Owner Admin Auth (public registration strictly disabled)
@@ -44,7 +46,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
         ->middleware('throttle:admin-login')
         ->name('login.store');
 
-    Route::middleware(['auth', 'owner'])->group(function (): void {
+    Route::middleware(['auth', 'owner', 'throttle:admin-write'])->group(function (): void {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::get('/', AdminDashboardController::class)->name('dashboard');
 

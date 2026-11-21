@@ -9,7 +9,6 @@ services:
     volumes:
       - .:/var/www/html
     environment:
-      APP_ENV: local
       DB_HOST: mysql
       REDIS_HOST: redis
     depends_on:
@@ -83,7 +82,6 @@ services:
     volumes:
       - .:/var/www/html
     environment:
-      APP_ENV: local
       DB_HOST: mysql
       REDIS_HOST: redis
     depends_on:

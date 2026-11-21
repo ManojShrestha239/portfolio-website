@@ -1,2 +1,8 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /admin/
+Disallow: /horizon
+Disallow: /horizon/
+Disallow: /api/
+
+Sitemap: /sitemap.xml
