@@ -185,13 +185,25 @@ function Contact({ siteSettings, scopeOptions, canonicalUrl, flash, app }: Conta
                                 />
                             </div>
 
-                            <div className="hidden" aria-hidden="true">
-                                <label htmlFor="contact-website">Website</label>
+                            <div
+                                aria-hidden="true"
+                                style={{
+                                    position: 'absolute',
+                                    left: '-9999px',
+                                    width: '1px',
+                                    height: '1px',
+                                    overflow: 'hidden',
+                                    opacity: 0,
+                                    pointerEvents: 'none',
+                                }}
+                            >
                                 <input
-                                    id="contact-website"
                                     type="text"
+                                    name="hp_check"
                                     tabIndex={-1}
-                                    autoComplete="off"
+                                    autoComplete="new-password"
+                                    data-lpignore="true"
+                                    data-1p-ignore="true"
                                     value={form.data.website}
                                     onChange={(e) => form.setData('website', e.target.value)}
                                 />
@@ -219,6 +231,15 @@ function Contact({ siteSettings, scopeOptions, canonicalUrl, flash, app }: Conta
                                     </p>
                                 )}
                             </div>
+
+                            {Object.keys(form.errors).length > 0 && (
+                                <div
+                                    role="alert"
+                                    className="border border-danger/50 bg-canvas px-4 py-3 font-mono text-xs text-danger"
+                                >
+                                    {Object.values(form.errors)[0]}
+                                </div>
+                            )}
 
                             <MagneticButton>
                                 <Button type="submit" variant="accent" size="lg" disabled={form.processing}>
