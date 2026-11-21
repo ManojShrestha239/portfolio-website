@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Public;
 
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -15,8 +17,9 @@ final class LocalWeatherController
 
     private const TTL_SECONDS = 900;
 
-    public function __invoke(): JsonResponse
+    public function __invoke(Request $request): JsonResponse
     {
+        /** @var array<string, mixed> $payload */
         $payload = Cache::remember(
             self::CACHE_KEY,
             self::TTL_SECONDS,
@@ -63,7 +66,13 @@ final class LocalWeatherController
             },
         );
 
-        return response()->json($payload);
+        return ApiResponse::ok(
+            data: $payload,
+            message: ($payload['available'] ?? false) === true
+                ? 'Local weather telemetry retrieved.'
+                : 'Weather telemetry temporarily unavailable.',
+            request: $request,
+        );
     }
 
     /**

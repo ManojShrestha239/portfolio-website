@@ -14,30 +14,60 @@ const STATUS_META: Record<
     number,
     { readonly title: string; readonly summary: string; readonly diagnostic: string }
 > = {
+    400: {
+        title: 'Bad Request',
+        summary: 'The request payload or query parameters could not be parsed.',
+        diagnostic: 'BAD_REQUEST',
+    },
+    401: {
+        title: 'Authentication Required',
+        summary: 'Valid owner credentials are required to access this endpoint.',
+        diagnostic: 'UNAUTHENTICATED',
+    },
     403: {
         title: 'Access Restricted',
-        summary: 'Owner authorization is required to access this route.',
-        diagnostic: 'AUTH_POLICY_DENIED · SINGLE_OWNER_BOUNDARY',
+        summary: 'Owner authorization is required to access this resource.',
+        diagnostic: 'AUTH_POLICY_DENIED',
     },
     404: {
         title: 'Route Not Found',
         summary: 'The requested document, case study, or endpoint does not exist on this host.',
-        diagnostic: 'HTTP_404_UNRESOLVED · VERIFY_SLUG_OR_INDEX',
+        diagnostic: 'RESOURCE_NOT_FOUND',
+    },
+    405: {
+        title: 'Method Not Allowed',
+        summary: 'The HTTP verb used is not supported for this route.',
+        diagnostic: 'METHOD_NOT_ALLOWED',
+    },
+    419: {
+        title: 'Session Expired',
+        summary: 'Your security token expired. Reload the page and retry your request.',
+        diagnostic: 'CSRF_TOKEN_MISMATCH',
+    },
+    429: {
+        title: 'Too Many Requests',
+        summary: 'Request rate limit exceeded. Wait briefly before retrying.',
+        diagnostic: 'RATE_LIMIT_EXCEEDED',
     },
     500: {
         title: 'Internal Server Error',
         summary: 'An unexpected runtime exception interrupted processing of this request.',
-        diagnostic: 'RUNTIME_FAULT · LOGGED_FOR_INSPECTION',
+        diagnostic: 'INTERNAL_SERVER_ERROR',
     },
     502: {
         title: 'Bad Gateway',
         summary: 'The upstream PHP-FPM application runtime returned an invalid response.',
-        diagnostic: 'UPSTREAM_GATEWAY_FAULT · RETRY_SHORTLY',
+        diagnostic: 'UPSTREAM_GATEWAY_FAULT',
     },
     503: {
         title: 'Service Unavailable',
         summary: 'The portfolio is temporarily offline for scheduled maintenance or deployment.',
-        diagnostic: 'MAINTENANCE_MODE_ACTIVE · ZERO_DATA_LOSS',
+        diagnostic: 'SERVICE_UNAVAILABLE',
+    },
+    504: {
+        title: 'Gateway Timeout',
+        summary: 'The upstream runtime did not complete the request within the timeout window.',
+        diagnostic: 'GATEWAY_TIMEOUT',
     },
 };
 

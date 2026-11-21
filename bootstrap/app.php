@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 use App\Http\Middleware\EnsurePortfolioOwner;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Support\ApiResponse;
+use App\Support\HttpStatusCatalog;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -35,12 +39,44 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request): Response {
             $status = $response->getStatusCode();
+            $isApiOrJson = $request->is('api/*') || $request->expectsJson();
 
-            if ($request->is('api/*') || $request->expectsJson()) {
-                return $response;
+            // 1. Unified JSON / API error envelope for all 4xx / 5xx status codes
+            if ($isApiOrJson && $status >= 400) {
+                $preservedHeaders = [];
+                foreach (['Retry-After', 'Allow', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'] as $header) {
+                    $value = $response->headers->get($header);
+                    if ($value !== null) {
+                        $preservedHeaders[$header] = $value;
+                    }
+                }
+
+                $errors = $exception instanceof ValidationException
+                    ? $exception->errors()
+                    : null;
+
+                $message = null;
+                if ($exception instanceof ValidationException) {
+                    $message = $exception->getMessage();
+                } elseif ($status < 500 && trim($exception->getMessage()) !== '') {
+                    $message = $exception->getMessage();
+                }
+
+                return ApiResponse::error(
+                    status: $status,
+                    message: $message,
+                    errors: $errors,
+                    request: $request,
+                    headers: $preservedHeaders,
+                );
             }
 
-            if (! in_array($status, [403, 404, 500, 502, 503], true)) {
+            // 2. Web / Inertia CSRF expiry (419): redirect back cleanly with flash message
+            if ($status === 419) {
+                return back()->with('error', 'Your session expired. Please retry your submission.');
+            }
+
+            if (! in_array($status, HttpStatusCatalog::webErrorStatuses(), true)) {
                 return $response;
             }
 
@@ -49,44 +85,18 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $response;
             }
 
-            $meta = match ($status) {
-                403 => [
-                    'title' => 'Access Restricted',
-                    'summary' => 'Owner authorization is required to access this route.',
-                    'diagnostic' => 'AUTH_POLICY_DENIED · SINGLE_OWNER_BOUNDARY',
-                ],
-                404 => [
-                    'title' => 'Route Not Found',
-                    'summary' => 'The requested document, case study, or endpoint does not exist on this host.',
-                    'diagnostic' => 'HTTP_404_UNRESOLVED · VERIFY_SLUG_OR_INDEX',
-                ],
-                502 => [
-                    'title' => 'Bad Gateway',
-                    'summary' => 'The upstream PHP-FPM application runtime returned an invalid response.',
-                    'diagnostic' => 'UPSTREAM_GATEWAY_FAULT · RETRY_SHORTLY',
-                ],
-                503 => [
-                    'title' => 'Service Unavailable',
-                    'summary' => 'The portfolio is temporarily offline for scheduled maintenance or deployment.',
-                    'diagnostic' => 'MAINTENANCE_MODE_ACTIVE · ZERO_DATA_LOSS',
-                ],
-                default => [
-                    'title' => 'Internal Server Error',
-                    'summary' => 'An unexpected runtime exception interrupted processing of this request.',
-                    'diagnostic' => 'RUNTIME_FAULT · LOGGED_FOR_INSPECTION',
-                ],
-            };
+            $meta = HttpStatusCatalog::describe($status);
 
             try {
                 return Inertia::render('Public/Error', [
-                    'status' => $status,
+                    'status' => $meta['status'],
                     'title' => $meta['title'],
                     'summary' => $meta['summary'],
-                    'diagnostic' => $meta['diagnostic'],
+                    'diagnostic' => $meta['code'],
                     'path' => '/'.ltrim($request->path(), '/'),
                 ])
                     ->toResponse($request)
-                    ->setStatusCode($status);
+                    ->setStatusCode($meta['status']);
             } catch (Throwable) {
                 return $response;
             }

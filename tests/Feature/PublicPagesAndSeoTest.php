@@ -93,10 +93,15 @@ final class PublicPagesAndSeoTest extends TestCase
         $this->getJson('/telemetry/weather')
             ->assertOk()
             ->assertJson([
-                'available' => true,
-                'temperatureC' => 23,
-                'condition' => 'Clear',
-                'icon' => 'sun',
+                'ok' => true,
+                'status' => 200,
+                'code' => 'OK',
+                'data' => [
+                    'available' => true,
+                    'temperatureC' => 23,
+                    'condition' => 'Clear',
+                    'icon' => 'sun',
+                ],
             ]);
     }
 }

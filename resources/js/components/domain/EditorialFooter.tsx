@@ -85,9 +85,10 @@ export function EditorialFooter() {
             signal: controller.signal,
         })
             .then((res) => (res.ok ? res.json() : null))
-            .then((data: LocalWeatherState | null) => {
-                if (data && typeof data.available === 'boolean') {
-                    setWeather(data);
+            .then((envelope: { readonly ok?: boolean; readonly data?: LocalWeatherState } | null) => {
+                const payload = envelope?.data;
+                if (payload && typeof payload.available === 'boolean') {
+                    setWeather(payload);
                 }
             })
             .catch(() => {
