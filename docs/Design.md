@@ -1,62 +1,46 @@
-# Design System — "Industrial Editorial Dark"
+# Design System — "Near-Monochrome Industrial Editorial Dark"
 
-## 1. Visual Philosophy
+## 1. Aesthetic Philosophy
 
-This portfolio is designed like a **printed Swiss technical monograph rendered on an obsidian drafting table**. Authority comes from restraint, grid precision, typography, and real system diagrams—never from decorative glows or animation gimmicks.
+Designed like a **Swiss technical monograph printed on obsidian stock, paired with GPU-rendered halftone hardware precision**. Authority comes from near-monochrome high contrast, ordered dithering, oversized editorial typography, generous negative space, and real system diagrams—never decorative AI glows.
 
-## 2. Color Palette (Anti-AI Dark Mode)
+## 2. Color Palette & Contrast Shift Tokens
 
-No pure black (`#000000`). No purple/cyan neon gradients.
-
-- **Canvas Base**: `#0C0D0F` (Deep Charcoal Obsidian)
-- **Surface / Card**: `#121417` (Elevated Graphite)
-- **Surface Hover**: `#181B20`
-- **Hairline Borders**: `#23272F` (Crisp 1px structural dividers)
-- **Primary Text**: `#EDEDEF` (Off-white, prevents halation eye strain)
-- **Secondary Text**: `#9CA3AF` (Technical Slate)
-- **Muted / Telemetry Text**: `#6B7280`
-- **Primary Accent (Used Sparingly)**: `#D97706` (Industrial Amber — status dots, active indicators, key metric callouts)
-- **Semantic Status**: Success `#10B981`, Error `#EF4444`
+- **Dark Canvas Base (Default)**: `#0C0D0F` (Obsidian Charcoal — NEVER pure `#000000`)
+- **Dark Elevated Surface**: `#121417` | Hover: `#181B20`
+- **Dark Hairline Borders**: `#23272F` (Crisp 1px structural dividers)
+- **Dark Primary Ink**: `#EDEDEF` | Secondary: `#9CA3AF` | Telemetry Muted: `#6B7280`
+- **Archival Light Band (Full-Bleed Contrast Shift)**: Canvas `#F4F3EF` | Ink `#111317` | Hairline `#D6D3CD`
+- **Restrained Accent**: `#D97706` (Industrial Amber — active telemetry dots, focus indicators, subtle shader highlights <= 18% luminance)
+- **Semantic**: Success `#10B981`, Error `#EF4444`
 
 ## 3. Typography
 
-- **Display / Headings**: `Instrument Serif` or `Space Grotesk` (tight editorial tracking `-0.02em`, crisp weight contrast).
-- **Body**: `Geist Sans` or `Plus Jakarta Sans` (16px base, `1.65` line-height, max measure `68ch` for reading comfort).
-- **Code & Technical Telemetry**: `JetBrains Mono` (used for dates, version tags, SQL/PHP snippets, and metric labels like `ETL: 45s / 64MB RAM`).
+- **Oversized Editorial Display**: `Instrument Serif` or `Space Grotesk` (tight tracking `-0.03em`, dramatic scale up to `clamp(3.2rem, 8vw, 7.5rem)` for Hero and Kinetic Marquee bands).
+- **Body**: `Geist Sans` or `Plus Jakarta Sans` (`16px` base, `1.65` line-height, `68ch` max reading measure).
+- **Telemetry & Code**: `JetBrains Mono` (system metrics, version badges, SQL/PHP code blocks, table headers).
 
-## 4. Layout & Spacing Rules
+## 4. WebGL & Shader Animations (Part 1 — Public Layout)
 
-- **Hairline Structural Grid**: Use visible 1px `#23272F` borders separating major sections instead of floating rounded drop-shadow cards.
-- **Border Radius**: Sharp & deliberate (`rounded-sm` / `2px` to `4px` max). Ban `rounded-2xl` pill-heavy SaaS bloat.
-- **Whitespace**: Generous vertical rhythm (`py-20` to `py-28` between sections) so dense technical information breathes.
+- **Raymarched Gradient Field**: Custom GLSL fragment shader via Three.js `ShaderMaterial` using slow domain-warped SDF/noise fields (`uTime * 0.12`) strictly in near-monochrome obsidian/graphite with faint amber warmth.
+- **Ordered Bayer / Floyd-Steinberg Dithering**: 8x8 Ordered Bayer threshold matrix pass applied directly inside the fragment shader over luminance values for crisp halftone industrial texture.
+- **Subtle Animated Film Grain**: Procedural high-frequency hash grain (`opacity: 0.035–0.05`) composited cleanly without muddying typography.
 
-## 5. Motion & Interaction Rules
+## 5. Scroll Choreography & Micro-Interactions (Part 2 — Public Layout)
 
-- Ban scroll-jacking, parallax gimmicks, and bouncy spring animations.
-- Transitions limited to crisp `150ms ease-out` color/border shifts on hover and subtle underline reveals.
-- Respect `@media (prefers-reduced-motion: reduce)` globally.
+- **Lenis Smooth Scrolling**: Inertia scrolling (`lerp: 0.08`, `smoothWheel: true`) synced to `gsap.ticker` and `ScrollTrigger.update`.
+- **Horizontal Scroll Kinetic Typography**: Edge-to-edge oversized display text translating smoothly along X tied to vertical scroll progress (`scrub: 1`).
+- **Scroll-Scrubbed Flagship Showcases**: GSAP ScrollTrigger pinned/scrubbed architecture reveals for flagship systems.
+- **Full-Bleed Dark-to-Light Contrast Shifts**: Smooth CSS variable interpolation (`#0C0D0F` <-> `#F4F3EF`) entering and exiting the Research & Technical Writing band.
+- **Interactive Hover Marquee & Image-Reveal Rows**: Secondary project rows trigger a smooth horizontal tech-stack marquee and a masked cursor-following preview image on hover (desktop pointer-fine only).
+- **Magnetic CTA Buttons**: Subtle cursor attraction (`max 8px`) with damped spring return.
+- **Fluid Page Transitions**: Framer Motion `<AnimatePresence mode="wait">` transitions synced with Inertia page keys.
+- **Slide-Over / Slide-Out Drawer**: Hardware-accelerated Scope/Consultation Drawer sliding cleanly from the right edge (`shadcn Sheet` + Framer Motion easing).
 
 ## 6. Hard Visual Bans (Rejection Criteria)
 
-- NO radial gradient blobs or glowing background meshes.
-- NO `backdrop-blur` glassmorphism cards.
-- NO gradient-filled headline text.
-- NO stock 3D illustrations or abstract AI avatars.
-- NO skill percentage bars or star ratings.
-
-## 7. WebGL & Shader Backdrop Specification (Part 1)
-
-- **Raymarched Gradient Field**: Custom GLSL fragment shader rendered via Three.js (`ShaderMaterial`) on a full-bleed fixed `<canvas>` behind the hero and footer bands. Uses smooth signed distance fields (SDF) / domain warping animated slowly (`uTime * 0.15`) in obsidian (`#0C0D0F`), deep slate (`#161920`), and restrained amber (`#D97706` at <= 18% luminance).
-- **Ordered Bayer / Error-Diffusion Dithering**: Apply an 8x8 Ordered Bayer matrix threshold pass inside the same fragment shader over the raymarched luminance values to produce crisp, tactile, retro-industrial halftone banding (eliminating smooth 8-bit gradient banding and AI-blob softness).
-- **Subtle Animated Film Grain**: Composite high-frequency procedural hash noise (`opacity: 0.035–0.05`) in the shader or lightweight CSS overlay so dark surfaces feel physical and printed.
-
-## 8. Scroll Choreography & Micro-Interactions (Part 2)
-
-- **Lenis Smooth Scrolling**: Inertia-based scrolling (`lerp: 0.08`, `smoothWheel: true`) synced directly to `gsap.ticker` and `ScrollTrigger.update`.
-- **Horizontal Scroll Kinetic Typography**: Oversized edge-to-edge display typography (e.g., `SYSTEMS ARCHITECT — INDUSTRIAL SAAS`) translating smoothly along the X-axis tied to vertical scroll velocity/progress (`scrub: 1`).
-- **Scroll-Scrubbed Flagship Showcases**: Pin and scrub the 4 flagship engineering case studies (Paint Tinting Suite, FieldMA SaaS, Bikram Sambat Engine, Bihani Gateway) via GSAP ScrollTrigger so architectural layers, metrics, and diagrams progress in lockstep with scroll.
-- **Full-Bleed Dark-to-Light Contrast Shifts**: Smoothly animate CSS custom properties (`--bg-canvas`, `--text-primary`, `--border-hairline`) via ScrollTrigger when entering the "Technical Writing / Deep-Dive Editorial" band—shifting from Obsidian Dark (`#0C0D0F`) to Warm Archival Paper (`#F4F3EF`) and back to dark cleanly.
-- **Interactive Hover Marquee & Image-Reveal Rows**: On the Secondary Systems & Domain Index rows, hovering triggers a subtle horizontal marquee of the tech stack while revealing a cursor-following, masked preview card of the system diagram/UI.
-- **Magnetic CTA Buttons**: Primary action buttons ("Start a Technical Inquiry", "Inspect Architecture") subtly attract toward cursor coordinates (`max displacement: 8px`, damped spring return).
-- **Fluid Page Transitions**: Framer Motion `<AnimatePresence mode="wait">` curtain/opacity-transform transitions integrated with Inertia page keys.
-- **Slide-Over Consultation / Scope Drawer**: Hardware-accelerated slide-over/slide-out drawer (built on shadcn `Sheet`/Radix Dialog + Framer Motion easing) allowing CTOs/clients to build a project inquiry or consultation scope from any route without losing scroll context.
+- NO pure `#000000` backgrounds or neon purple/cyan gradients.
+- NO radial glow blobs or `backdrop-blur` glassmorphism cards.
+- NO gradient-clipped headline text (`bg-clip-text text-transparent`).
+- NO skill percentage bars, star ratings, or stock 3D avatars.
+- Sharp deliberate radii (`2px`–`4px` max; ban `rounded-2xl` bloat).

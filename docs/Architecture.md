@@ -1,59 +1,45 @@
-# System Architecture — Manoj Shrestha Portfolio
+# System Architecture — Manoj Shrestha Dynamic Portfolio
 
 ## 1. Tech Stack Overview
 
-- **Backend**: Laravel 13 (PHP 8.4+), strict typing (`declare(strict_types=1)`).
-- **Frontend Bridge**: Inertia.js v3 (server-driven routing, zero separate REST boilerplate).
-- **UI Layer**: React 19, TypeScript (strict mode), Tailwind CSS v4, shadcn/ui primitives (Radix UI unstyled behaviors, heavily customized tokens).
-- **Database**: MySQL 8.0 (structured metadata for projects, articles, inquiries, and lightweight privacy-first page-view telemetry).
-- **Queues & Cache**: Redis + Laravel Horizon (background job processing, response/content caching, rate limiting).
-- **Local Development Only**: Docker Compose (`app` PHP-FPM, `nginx`, `mysql`, `redis`, `horizon`, `node/vite`). Production deploys natively or via standard VPS/cloud without requiring local dev containers.
+- **Backend**: Laravel 13 (PHP 8.4+), `declare(strict_types=1);`, Invokable Controllers, Form Requests, Action Classes, Readonly DTOs.
+- **Frontend Bridge**: Inertia.js (server-driven SPA routing with shared persistent layouts).
+- **UI & Creative Tech**: React 19, TypeScript (strict mode), Tailwind CSS v4, shadcn/ui primitives, raw Three.js (GLSL WebGL shaders), Lenis (smooth scroll), GSAP ScrollTrigger, Framer Motion.
+- **Database**: MySQL 8.0 (100% dynamic content, inquiries, resume data, and daily aggregated page views).
+- **Cache & Queues**: Redis + Laravel Horizon (cached public DTO payloads with instant invalidation on admin edits, async contact notifications, image optimization, and page-view aggregation).
+- **Local Development Only**: Docker Compose (`app` PHP 8.4-FPM, `nginx`, `mysql`, `redis`, `horizon`, `node`).
 
-## 2. High-Level Request & Data Flow
+## 2. Dual Persistent Layout Architecture
 
-1. Browser requests route (e.g., `/work/fieldma-saas`).
-2. Laravel Route -> Invokable Controller -> Domain Service/Repository (reads cached DTO from Redis; falls back to MySQL).
-3. Controller returns `Inertia::render('Work/Show', ['project' => ProjectData::from($project)])`.
-4. React 19 renders page layout with strict TypeScript props and zero client-side data waterfalls.
-5. Side effects (e.g., `POST /contact`, view-count increment) dispatch lightweight Jobs (`SendInquiryNotificationJob`, `RecordPageViewJob`) to Redis, processed asynchronously by Laravel Horizon.
+To keep the public site visually extraordinary and the admin CMS razor-fast:
 
-## 3. Directory Structure (Key Boundaries)
+- **`PublicLayout.tsx` (Persistent)**: Mounts `DitheredFieldCanvas.tsx` (single shared Three.js `WebGLRenderer`), `SmoothScrollProvider.tsx` (Lenis + GSAP ScrollTrigger), Framer Motion `PageTransition.tsx`, and the global slide-over `ScopeDrawer.tsx`. WebGL contexts never recreate during Inertia navigation.
+- **`AdminLayout.tsx` (Persistent)**: Uses the exact same Industrial Editorial Dark tokens (`#0C0D0F`, `#121417`, `#23272F`, `#D97706`) with **zero WebGL** and **zero Lenis**, featuring a crisp sidebar, shadcn data tables, and instant form responsiveness.
 
-- `app/Actions/` — Single-responsibility business actions (`SubmitInquiryAction`, `SyncMarkdownContentAction`).
-- `app/Data/` — Readonly PHP DTOs representing Inertia payloads.
-- `app/Http/Controllers/` — Thin invokable controllers (no business logic or raw queries).
-- `app/Jobs/` — Queued Horizon jobs (`SendInquiryNotificationJob`, `RecordPageViewJob`).
-- `content/projects/` & `content/articles/` — Source-of-truth Markdown + YAML frontmatter files.
-- `resources/js/pages/` — Inertia page components.
-- `resources/js/components/ui/` — Customized shadcn/ui primitives.
-- `resources/js/components/domain/` — Bespoke portfolio components (ArchitectureDiagram, MetricStrip, TechnicalTable).
-- `resources/js/types/` — Strict TypeScript interfaces mirroring PHP DTOs.
+## 3. Data & Cache Invalidation Flow
 
-## 4. Database Schema (Core Tables)
+- **Public Reads**: Request -> Thin Invokable Controller -> Query Service reads Redis cache (`portfolio:projects:published`, `portfolio:articles:published`, etc.) -> falls back to MySQL -> returns typed Readonly DTO via `Inertia::render()`.
+- **Admin Writes**: `/admin/*` Form Submission -> `FormRequest` validation -> `App\Actions\Admin\*` persists to MySQL -> immediately busts affected Redis cache tags/keys -> dispatches `OptimizeUploadedMediaJob` (if media uploaded) to Horizon.
+- **Public Inquiries & Telemetry**: `POST /inquiries` -> `StoreInquiryRequest` (honeypot + Redis rate limit) -> `SubmitInquiryAction` persists to MySQL -> dispatches `SendInquiryNotificationJob` to Horizon. Page views dispatch `RecordPageViewJob` to Horizon.
 
-- `projects`: `id`, `slug` (unique), `title`, `category`, `is_flagship` (bool), `summary`, `metrics_json`, `tech_stack_json`, `body_html`, `diagram_mermaid`, `sort_order`, `published_at`.
-- `articles`: `id`, `slug` (unique), `title`, `excerpt`, `target_audience`, `tags_json`, `body_html`, `reading_time_mins`, `published_at`.
-- `inquiries`: `id`, `name`, `email`, `company`, `message`, `ip_hash`, `status`, `created_at`.
-- `page_views`: `id`, `path`, `referrer_domain`, `viewed_date`, `count` (aggregated daily via Horizon to keep table tiny).
+## 4. Database Schema (MySQL 8.0)
 
-## 5. Frontend Creative-Tech Layer (Inertia + React 19)
+- `users`: Single-owner admin account (`id`, `name`, `email`, `password`, `is_owner`).
+- `projects`: `id`, `slug` (unique), `title`, `category`, `is_flagship` (bool), `summary`, `metrics_json`, `tech_stack_json`, `body_markdown`, `body_html`, `diagram_mermaid`, `preview_image_path`, `sort_order`, `published_at`, `timestamps`.
+- `articles`: `id`, `slug` (unique), `title`, `excerpt`, `target_audience`, `tags_json`, `body_markdown`, `body_html`, `reading_time_mins`, `published_at`, `timestamps`.
+- `experiences`: `id`, `role_title`, `organization`, `period`, `highlights_json`, `sort_order`, `timestamps`.
+- `skill_groups`: `id`, `category`, `skills_json`, `sort_order`, `timestamps`.
+- `site_settings`: `key` (unique), `value_json` (stores hero headline, telemetry metrics, active CV PDF path, availability status).
+- `inquiries`: `id`, `name`, `email`, `company`, `scope_tags_json`, `message`, `ip_hash`, `status`, `admin_notes`, `timestamps`.
+- `page_views`: `id`, `path`, `referrer_domain`, `viewed_date`, `count` (unique composite index on `path, viewed_date`).
 
-To prevent WebGL context loss and scroll glitches during SPA navigation, all global motion engines live inside a **Persistent Inertia Layout** (`resources/js/layouts/AppLayout.tsx`):
+## 5. Key Directory Boundaries
 
-- `resources/js/webgl/`
-  - `DitheredFieldCanvas.tsx` — Single shared Three.js `WebGLRenderer` with `OrthographicCamera`, custom `vertex.glsl` and `fragment.glsl` (raymarched field + 8x8 Bayer dithering + procedural grain). Disposes geometry/materials cleanly on unmount.
-- `resources/js/motion/`
-  - `SmoothScrollProvider.tsx` — Initializes `Lenis`, binds `gsap.ticker`, and listens to Inertia `router.on('navigate')` to reset scroll position and invoke `ScrollTrigger.refresh()`.
-  - `PageTransition.tsx` — Wraps Inertia page children in Framer Motion `AnimatePresence` keyed by `usePage().url`.
-  - `MagneticButton.tsx` — Reusable magnetic pointer-tracking wrapper for primary CTAs.
-  - `KineticMarqueeText.tsx` — Scroll-linked horizontal edge-to-edge typography component.
-  - `HoverRevealRow.tsx` — Interactive category/project row with hover marquee and floating diagram preview.
-- `resources/js/components/domain/ScopeDrawer.tsx`
-  - Global slide-over drawer (replaces e-commerce Cart/RFQ pattern with an Engineering Consultation & Project Scope Builder). Submits via Inertia `useForm` to `POST /inquiries` -> MySQL -> Redis/Horizon `SendInquiryNotificationJob`.
-
-### Additional Frontend Packages
-
-- `three`, `@types/three` (raw Three.js kept lean—no bloated 3D scene libraries needed for a full-screen fragment shader).
-- `lenis` (smooth inertia scroll).
-- `gsap` (ScrollTrigger for scroll-scrubbed showcases, kinetic horizontal text, and dark-to-light background interpolation).
-- `framer-motion` (fluid Inertia page transitions, magnetic spring physics, and slide-over drawer motion).
+- `app/Actions/Admin/` — `UpsertProjectAction`, `DeleteProjectAction`, `UpsertArticleAction`, `UpdateInquiryStatusAction`, `ClearPortfolioCacheAction`.
+- `app/Actions/Public/` — `SubmitInquiryAction`.
+- `app/Data/` — Readonly PHP DTOs (`ProjectData`, `ArticleData`, `ResumeData`, `InquiryData`).
+- `app/Jobs/` — `SendInquiryNotificationJob`, `OptimizeUploadedMediaJob`, `RecordPageViewJob`.
+- `database/seeders/PortfolioContentSeeder.php` — Seeds Manoj Shrestha's verified 4 flagship case studies, 4 secondary systems, 8 blog articles, and resume/skills data.
+- `resources/js/webgl/` — `DitheredFieldCanvas.tsx`, `shaders/raymarchDither.vert`, `shaders/raymarchDither.frag`.
+- `resources/js/motion/` — `SmoothScrollProvider.tsx`, `PageTransition.tsx`, `MagneticButton.tsx`, `KineticMarqueeText.tsx`, `HoverRevealRow.tsx`.
+- `resources/js/components/domain/` — `ScopeDrawer.tsx`, `MermaidDiagram.tsx`, `MetricStrip.tsx`.
