@@ -41,7 +41,11 @@
   - *Completed (2026-11-21)*: Built invokable controllers for `/work/{slug}`, `/writing` (tag-filtered), `/writing/{slug}`, `/resume`, and dynamic `/sitemap.xml` (`DOMDocument` XML).
   - Created `SeoHead.tsx` (dynamic OpenGraph + `Person`/`TechArticle` JSON-LD), dark-themed `MermaidDiagram.tsx` (deterministic SVG renderer + Mermaid source toggle), `.editorial-prose` styles, and `Public/Work/Show.tsx`, `Public/Writing/{Index,Show}.tsx` (sticky TOC), and `Public/Resume.tsx` (STAR timeline, skills matrix, CV PDF download).
   - Verified with `php artisan test` (16 passed), `npm run types`, and `npm run build`.
-- [ ] Phase 6: Slide-Over Scope Drawer, Horizon Queues & Production Hardening
+- [x] Phase 6: Slide-Over Scope Drawer, Horizon Queues & Production Hardening
+  - *Completed (2026-11-21)*: Built global `ScopeDrawerContext.tsx` and animated Radix Dialog + Framer Motion right-edge slide-over `ScopeDrawer.tsx` (zero `backdrop-blur`, toggleable scope tags, honeypot `website` trap), plus full `/contact` page (`Public/Contact.tsx`).
+  - Built `StoreInquiryRequest` (honeypot + `inquiry-submit` Redis rate limiter), `SubmitInquiryAction`, `NewInquiryNotification`, `SendInquiryNotificationJob` (`notifications` queue), `RecordPageViewJob` (`telemetry` queue, atomic daily aggregation), and `TrackPublicPageView` middleware.
+  - Updated `config/horizon.php` to supervise `['default', 'notifications', 'media', 'telemetry']` queues and added `/contact` to `/sitemap.xml`.
+  - Verified full suite: `php artisan test` (21 passed), `npm run types`, and `npm run build` all green.
 
 ## Active Gotchas & Constraints
 

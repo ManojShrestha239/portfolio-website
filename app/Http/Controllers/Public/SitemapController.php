@@ -20,6 +20,7 @@ final class SitemapController
             ['loc' => url('/'), 'priority' => '1.0', 'lastmod' => now()->toAtomString()],
             ['loc' => url('/writing'), 'priority' => '0.9', 'lastmod' => now()->toAtomString()],
             ['loc' => url('/resume'), 'priority' => '0.8', 'lastmod' => now()->toAtomString()],
+            ['loc' => url('/contact'), 'priority' => '0.8', 'lastmod' => now()->toAtomString()],
         ];
 
         foreach ($this->portfolioQuery->getPublishedProjects() as $project) {

@@ -9,6 +9,7 @@ import { KineticMarqueeText } from '@/motion/KineticMarqueeText';
 import { ContrastShiftBand } from '@/motion/ContrastShiftBand';
 import { HoverRevealRow } from '@/motion/HoverRevealRow';
 import { MagneticButton } from '@/motion/MagneticButton';
+import { useScopeDrawer } from '@/context/ScopeDrawerContext';
 import type { HomePageProps } from '@/types/portfolio';
 
 function Home({
@@ -18,6 +19,7 @@ function Home({
     secondaryProjects,
     recentArticles,
 }: HomePageProps) {
+    const { openDrawer } = useScopeDrawer();
     return (
         <>
             <Head title="Enterprise SaaS & Industrial Automation Architect" />
@@ -181,11 +183,14 @@ function Home({
 
                     <div className="flex flex-wrap items-center gap-4">
                         <MagneticButton>
-                            <Button variant="accent" size="lg" asChild>
-                                <Link href="/contact">
-                                    <span>Initiate Project Scope</span>
-                                    <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                                </Link>
+                            <Button
+                                type="button"
+                                variant="accent"
+                                size="lg"
+                                onClick={() => openDrawer()}
+                            >
+                                <span>Initiate Project Scope</span>
+                                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                             </Button>
                         </MagneticButton>
                         <MagneticButton>

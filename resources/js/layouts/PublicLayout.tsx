@@ -5,11 +5,14 @@ import { DitheredFieldCanvas } from '@/webgl/DitheredFieldCanvas';
 import { SmoothScrollProvider } from '@/motion/SmoothScrollProvider';
 import { PageTransition } from '@/motion/PageTransition';
 import { MagneticButton } from '@/motion/MagneticButton';
+import { ScopeDrawerProvider, useScopeDrawer } from '@/context/ScopeDrawerContext';
+import { ScopeDrawer } from '@/components/domain/ScopeDrawer';
 import { Button } from '@/components/ui/button';
 import type { SharedPageProps } from '@/types/portfolio';
 
-export function PublicLayout({ children }: PropsWithChildren) {
+function PublicLayoutShell({ children }: PropsWithChildren) {
     const page = usePage<SharedPageProps>();
+    const { openDrawer } = useScopeDrawer();
     const { app } = page.props;
 
     useEffect(() => {
@@ -70,6 +73,12 @@ export function PublicLayout({ children }: PropsWithChildren) {
                                 >
                                     Resume
                                 </Link>
+                                <Link
+                                    href="/contact"
+                                    className="telemetry-label text-ink-secondary transition-colors hover:text-ink"
+                                >
+                                    Contact
+                                </Link>
                             </nav>
 
                             <div className="flex items-center gap-4">
@@ -78,11 +87,14 @@ export function PublicLayout({ children }: PropsWithChildren) {
                                     {app.location}
                                 </span>
                                 <MagneticButton>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <a href="#scope-cta">
-                                            <span>Scope Project</span>
-                                            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                                        </a>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => openDrawer()}
+                                    >
+                                        <span>Scope Project</span>
+                                        <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
                                     </Button>
                                 </MagneticButton>
                             </div>
@@ -110,12 +122,25 @@ export function PublicLayout({ children }: PropsWithChildren) {
                                 <Link href="/resume" className="hover:text-ink">
                                     Resume
                                 </Link>
+                                <Link href="/contact" className="hover:text-ink">
+                                    Contact
+                                </Link>
                                 <span>&copy; {new Date().getFullYear()}</span>
                             </div>
                         </div>
                     </footer>
                 </div>
             </SmoothScrollProvider>
+
+            <ScopeDrawer />
         </div>
+    );
+}
+
+export function PublicLayout({ children }: PropsWithChildren) {
+    return (
+        <ScopeDrawerProvider>
+            <PublicLayoutShell>{children}</PublicLayoutShell>
+        </ScopeDrawerProvider>
     );
 }

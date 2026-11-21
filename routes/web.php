@@ -9,19 +9,30 @@ use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use App\Http\Controllers\Admin\ProjectController as AdminProjectController;
 use App\Http\Controllers\Admin\ResumeController as AdminResumeController;
 use App\Http\Controllers\Public\ArticleShowController;
+use App\Http\Controllers\Public\ContactController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\ProjectShowController;
 use App\Http\Controllers\Public\ResumeController as PublicResumeController;
 use App\Http\Controllers\Public\SitemapController;
+use App\Http\Controllers\Public\StoreInquiryController;
 use App\Http\Controllers\Public\WritingIndexController;
+use App\Http\Middleware\TrackPublicPageView;
 use Illuminate\Support\Facades\Route;
 
-// Public Routes
-Route::get('/', HomeController::class)->name('home');
-Route::get('/work/{slug}', ProjectShowController::class)->name('work.show');
-Route::get('/writing', WritingIndexController::class)->name('writing.index');
-Route::get('/writing/{slug}', ArticleShowController::class)->name('writing.show');
-Route::get('/resume', PublicResumeController::class)->name('resume.show');
+// Public Routes (tracked asynchronously via Horizon telemetry queue)
+Route::middleware(TrackPublicPageView::class)->group(function (): void {
+    Route::get('/', HomeController::class)->name('home');
+    Route::get('/work/{slug}', ProjectShowController::class)->name('work.show');
+    Route::get('/writing', WritingIndexController::class)->name('writing.index');
+    Route::get('/writing/{slug}', ArticleShowController::class)->name('writing.show');
+    Route::get('/resume', PublicResumeController::class)->name('resume.show');
+    Route::get('/contact', ContactController::class)->name('contact.show');
+});
+
+Route::post('/inquiries', StoreInquiryController::class)
+    ->middleware('throttle:inquiry-submit')
+    ->name('inquiries.store');
+
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Private Single-Owner Admin Auth (public registration strictly disabled)

@@ -27,5 +27,9 @@ final class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(5)->by($email.'|'.$request->ip());
         });
+
+        RateLimiter::for('inquiry-submit', static function (Request $request): Limit {
+            return Limit::perMinute(5)->by((string) $request->ip());
+        });
     }
 }
