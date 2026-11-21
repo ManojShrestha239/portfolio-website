@@ -19,8 +19,16 @@
 
 ## Phase Progress Tracker
 
-- [ ] Phase 1: Local Docker Stack, Foundation & WebGL Shader Canvas
-- [ ] Phase 2: Dynamic MySQL Schema, Models, Caching & Seeder
+- [x] Phase 1: Local Docker Stack, Foundation & WebGL Shader Canvas
+  - *Completed (2026-11-21)*: Authored local Docker stack (`compose.yaml`, `docker/php/Dockerfile`, `docker/php/php.ini`, `docker/nginx/default.conf`) for PHP 8.4-FPM, Nginx, MySQL 8.0, Redis, Horizon worker, and Node 22.
+  - Initialized Laravel 13.43, Inertia.js v3.7, Laravel Horizon v5.52, React 19, TypeScript 7 (strict, no `baseUrl`), Tailwind CSS v4, shadcn/ui primitives, Three.js, Lenis, GSAP ScrollTrigger, and Framer Motion.
+  - Built persistent `PublicLayout.tsx` hosting `DitheredFieldCanvas.tsx` (custom GLSL raymarched gradient field + analytic 8x8 Ordered Bayer dithering + procedural animated film grain, DPR <= 2, visibility/off-screen pause, `prefers-reduced-motion` static frame fallback) and `SmoothScrollProvider.tsx` (Lenis + GSAP ticker + Inertia navigation reset).
+  - Verified with `npm run types`, `npm run build`, and `php artisan test` (3 passed, 14 assertions).
+- [x] Phase 2: Dynamic MySQL Schema, Models, Caching & Seeder
+  - *Completed (2026-11-21)*: Created 8 schema migrations (`users.is_owner`, `projects`, `articles`, `experiences`, `skill_groups`, `site_settings`, `inquiries`, `page_views` with composite unique `(path, viewed_date)` index) and strictly typed Eloquent models (`User`, `Project`, `Article`, `Experience`, `SkillGroup`, `SiteSetting`, `Inquiry`, `PageView`).
+  - Built readonly PHP DTOs (`app/Data/`), safe CommonMark `MarkdownRenderer`, Redis-backed `PortfolioQueryService`, and `ClearPortfolioCacheAction` for instant cache invalidation.
+  - Authored idempotent `PortfolioContentSeeder` pre-populating Manoj Shrestha's verified owner account, 4 flagship case studies (with Mermaid diagrams), 4 secondary systems, 8 technical articles, STAR experience timeline, 4 skill groups, and site settings.
+  - Wired `HomeController` to cached DTOs and verified with `migrate:fresh --seed`, `php artisan test` (6 passed, 42 assertions), `npm run types`, and `npm run build`.
 - [ ] Phase 3: Private Single-Owner `/admin` CMS
 - [ ] Phase 4: Public Scroll Choreography, Contrast Shifts & Showcases
 - [ ] Phase 5: Case Study Details, Technical Blog, Resume & SEO
@@ -31,3 +39,4 @@
 - Always call `ScrollTrigger.refresh()` and reset Lenis scroll position on Inertia route transitions.
 - Keep `Model::preventLazyLoading()` enabled in local dev to catch N+1 queries immediately.
 - Never allow public registration routes; `/admin` is strictly single-owner.
+- Laravel 13 cache deserialization defaults to `allowed_classes => false` (`__PHP_Incomplete_Class` if objects are cached directly); always cache plain scalar arrays in Redis and hydrate readonly DTOs via `fromArray()`.

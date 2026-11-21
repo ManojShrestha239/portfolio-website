@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme {
+    --color-canvas: var(--theme-canvas);
+    --color-surface: var(--theme-surface);
+    --color-surface-hover: var(--theme-surface-hover);
+    --color-hairline: var(--theme-hairline);
+    --color-ink: var(--theme-ink);
+    --color-ink-secondary: var(--theme-ink-secondary);
+    --color-ink-muted: var(--theme-ink-muted);
+    --color-accent: #D97706;
+    --color-accent-subtle: rgba(217, 119, 6, 0.14);
+    --color-success: #10B981;
+    --color-danger: #EF4444;
+
+    --color-archival-canvas: #F4F3EF;
+    --color-archival-ink: #111317;
+    --color-archival-hairline: #D6D3CD;
+
+    --font-display: "Instrument Serif", "Space Grotesk", Georgia, serif;
+    --font-grotesk: "Space Grotesk", system-ui, sans-serif;
+    --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    --radius-xs: 2px;
+    --radius-sm: 4px;
+}
+
+:root {
+    --theme-canvas: #0C0D0F;
+    --theme-surface: #121417;
+    --theme-surface-hover: #181B20;
+    --theme-hairline: #23272F;
+    --theme-ink: #EDEDEF;
+    --theme-ink-secondary: #9CA3AF;
+    --theme-ink-muted: #6B7280;
+    color-scheme: dark;
+}
+
+[data-band="archival"] {
+    --theme-canvas: #F4F3EF;
+    --theme-surface: #EAE8E1;
+    --theme-surface-hover: #E2DFD7;
+    --theme-hairline: #D6D3CD;
+    --theme-ink: #111317;
+    --theme-ink-secondary: #4B5563;
+    --theme-ink-muted: #6B7280;
+    color-scheme: light;
+}
+
+@layer base {
+    html {
+        background-color: var(--theme-canvas);
+        color: var(--theme-ink);
+        font-family: var(--font-sans);
+        font-size: 16px;
+        line-height: 1.65;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: clip;
+        background-color: var(--theme-canvas);
+        color: var(--theme-ink);
+        transition: background-color 420ms cubic-bezier(0.22, 1, 0.36, 1),
+                    color 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    ::selection {
+        background-color: rgba(217, 119, 6, 0.28);
+        color: var(--theme-ink);
+    }
+
+    :focus-visible {
+        outline: 1px solid #D97706;
+        outline-offset: 2px;
+    }
+}
+
+.editorial-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+    line-height: 0.96;
+}
+
+.telemetry-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
