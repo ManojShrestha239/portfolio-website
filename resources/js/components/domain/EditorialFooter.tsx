@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from '@inertiajs/react';
-import { ArrowUp } from 'lucide-react';
+import {
+    ArrowUp,
+    Cloud,
+    CloudFog,
+    CloudLightning,
+    CloudRain,
+    Moon,
+    Sun,
+} from 'lucide-react';
 import { MagneticButton } from '@/motion/MagneticButton';
 import { Button } from '@/components/ui/button';
 
@@ -17,6 +25,16 @@ const COLOPHON_STACK: readonly string[] = [
     'Docker',
 ];
 
+type WeatherIconKey = 'sun' | 'moon' | 'cloud' | 'fog' | 'rain' | 'storm';
+
+interface LocalWeatherState {
+    readonly available: boolean;
+    readonly location: string;
+    readonly temperatureC: number | null;
+    readonly condition: string;
+    readonly icon: WeatherIconKey;
+}
+
 function formatNepalTime(): string {
     return new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Asia/Kathmandu',
@@ -27,8 +45,27 @@ function formatNepalTime(): string {
     }).format(new Date());
 }
 
+function WeatherGlyph({ icon }: { readonly icon: WeatherIconKey }) {
+    const className = 'h-3.5 w-3.5 text-accent shrink-0';
+    switch (icon) {
+        case 'sun':
+            return <Sun className={className} aria-hidden="true" />;
+        case 'moon':
+            return <Moon className={className} aria-hidden="true" />;
+        case 'fog':
+            return <CloudFog className={className} aria-hidden="true" />;
+        case 'rain':
+            return <CloudRain className={className} aria-hidden="true" />;
+        case 'storm':
+            return <CloudLightning className={className} aria-hidden="true" />;
+        default:
+            return <Cloud className={className} aria-hidden="true" />;
+    }
+}
+
 export function EditorialFooter() {
     const [clock, setClock] = useState<string>('—:—:—');
+    const [weather, setWeather] = useState<LocalWeatherState | null>(null);
 
     useEffect(() => {
         setClock(formatNepalTime());
@@ -36,6 +73,26 @@ export function EditorialFooter() {
             setClock(formatNepalTime());
         }, 1000);
         return () => window.clearInterval(intervalId);
+    }, []);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        fetch('/telemetry/weather', {
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data: LocalWeatherState | null) => {
+                if (data && typeof data.available === 'boolean') {
+                    setWeather(data);
+                }
+            })
+            .catch(() => {
+                // Silent fallback if weather telemetry is unreachable
+            });
+
+        return () => controller.abort();
     }, []);
 
     const scrollToTop = (): void => {
@@ -85,12 +142,32 @@ export function EditorialFooter() {
                 </div>
 
                 <div className="flex flex-col items-start justify-between gap-6 lg:col-span-3 lg:items-end lg:text-right">
-                    <div>
-                        <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-muted">
-                            Nepal · local time
-                        </span>
-                        <div className="mt-2 font-mono text-2xl tabular-nums text-ink">
-                            {clock}
+                    <div className="space-y-4">
+                        <div>
+                            <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-ink-muted">
+                                Nepal · local time
+                            </span>
+                            <div className="mt-2 font-mono text-2xl tabular-nums text-ink">
+                                {clock}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-hairline pt-3">
+                            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-muted">
+                                {weather?.location ?? 'Bharatpur, NP'} · weather
+                            </span>
+                            <div className="mt-1.5 flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em] text-ink lg:justify-end">
+                                <WeatherGlyph icon={weather?.icon ?? 'cloud'} />
+                                <span className="tabular-nums">
+                                    {weather?.available && weather.temperatureC !== null
+                                        ? `${weather.temperatureC}°C`
+                                        : '—°C'}
+                                </span>
+                                <span className="text-ink-muted">·</span>
+                                <span className="text-ink-secondary">
+                                    {weather?.available ? weather.condition : 'Syncing'}
+                                </span>
+                            </div>
                         </div>
                     </div>
 

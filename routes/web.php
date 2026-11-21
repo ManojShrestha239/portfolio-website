@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ResumeController as AdminResumeController;
 use App\Http\Controllers\Public\ArticleShowController;
 use App\Http\Controllers\Public\ContactController;
 use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\LocalWeatherController;
 use App\Http\Controllers\Public\ProjectShowController;
 use App\Http\Controllers\Public\ResumeController as PublicResumeController;
 use App\Http\Controllers\Public\SitemapController;
@@ -33,6 +34,7 @@ Route::post('/inquiries', StoreInquiryController::class)
     ->middleware('throttle:inquiry-submit')
     ->name('inquiries.store');
 
+Route::get('/telemetry/weather', LocalWeatherController::class)->name('telemetry.weather');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 // Private Single-Owner Admin Auth (public registration strictly disabled)

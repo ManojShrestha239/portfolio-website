@@ -77,4 +77,26 @@ final class PublicPagesAndSeoTest extends TestCase
         $sitemap->assertSee('/writing/early-return-migration-trap-multi-tenant-laravel', false);
         $sitemap->assertSee('/resume', false);
     }
+
+    public function test_local_weather_endpoint_returns_cached_telemetry_json(): void
+    {
+        \Illuminate\Support\Facades\Http::fake([
+            '*' => \Illuminate\Support\Facades\Http::response([
+                'current' => [
+                    'temperature_2m' => 23.4,
+                    'weather_code' => 0,
+                    'is_day' => 1,
+                ],
+            ], 200),
+        ]);
+
+        $this->getJson('/telemetry/weather')
+            ->assertOk()
+            ->assertJson([
+                'available' => true,
+                'temperatureC' => 23,
+                'condition' => 'Clear',
+                'icon' => 'sun',
+            ]);
+    }
 }
