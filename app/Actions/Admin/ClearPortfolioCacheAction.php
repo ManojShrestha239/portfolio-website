@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Admin;
 
+use App\Events\PortfolioContentUpdated;
 use App\Support\PortfolioCacheKeys;
 use Illuminate\Support\Facades\Cache;
 
@@ -51,5 +52,17 @@ final class ClearPortfolioCacheAction
                 Cache::forget(PortfolioCacheKeys::articleBySlug($slug));
             }
         }
+
+        $scope = $clearAll ? 'all' : implode(',', array_keys(array_filter([
+            'projects' => $projects || $projectSlugs !== [],
+            'articles' => $articles || $articleSlugs !== [],
+            'resume' => $resume,
+            'site_settings' => $siteSettings,
+        ])));
+
+        event(new PortfolioContentUpdated(
+            scope: $scope !== '' ? $scope : 'all',
+            updatedAt: now()->toIso8601String(),
+        ));
     }
 }

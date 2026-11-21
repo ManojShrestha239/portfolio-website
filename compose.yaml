@@ -11,6 +11,7 @@ services:
     environment:
       DB_HOST: mysql
       REDIS_HOST: redis
+      REVERB_HOST: reverb
     depends_on:
       mysql:
         condition: service_healthy
@@ -84,9 +85,31 @@ services:
     environment:
       DB_HOST: mysql
       REDIS_HOST: redis
+      REVERB_HOST: reverb
     depends_on:
       mysql:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - portfolio_net
+
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: portfolio_reverb
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "${REVERB_PORT:-8080}:8080"
+    volumes:
+      - .:/var/www/html
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    depends_on:
       redis:
         condition: service_healthy
     networks:

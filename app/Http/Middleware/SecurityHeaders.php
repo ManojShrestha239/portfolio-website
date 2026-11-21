@@ -31,14 +31,19 @@ final class SecurityHeaders
 
         $isLocal = app()->isLocal();
         $vitePort = (int) env('VITE_PORT', 5173);
+        $reverbHost = (string) env('VITE_REVERB_HOST', 'localhost');
+        $reverbPort = (int) env('VITE_REVERB_PORT', 8080);
+        $reverbScheme = (string) env('VITE_REVERB_SCHEME', 'http') === 'https' ? 'wss' : 'ws';
+        $reverbOrigin = sprintf('%s://%s:%d', $reverbScheme, $reverbHost, $reverbPort);
+
         $devOrigins = sprintf('localhost:%d 127.0.0.1:%d', $vitePort, $vitePort);
 
         $scriptSrc = $isLocal
             ? "'self' 'unsafe-inline' 'unsafe-eval' {$devOrigins}"
             : "'self' 'unsafe-inline'";
         $connectSrc = $isLocal
-            ? "'self' {$devOrigins} ws://localhost:{$vitePort} ws://127.0.0.1:{$vitePort}"
-            : "'self'";
+            ? "'self' {$reverbOrigin} {$devOrigins} ws://localhost:{$vitePort} ws://127.0.0.1:{$vitePort}"
+            : "'self' {$reverbOrigin}";
 
         $csp = implode('; ', [
             "default-src 'self'",

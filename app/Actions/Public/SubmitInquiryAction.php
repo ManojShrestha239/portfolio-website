@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Public;
 
+use App\Events\InquirySubmitted;
 use App\Jobs\SendInquiryNotificationJob;
 use App\Models\Inquiry;
 
@@ -27,6 +28,7 @@ final class SubmitInquiryAction
         ]);
 
         SendInquiryNotificationJob::dispatch($inquiry->id);
+        event(InquirySubmitted::fromModel($inquiry));
 
         return $inquiry;
     }
